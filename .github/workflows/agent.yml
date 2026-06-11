@@ -22,6 +22,11 @@ concurrency:
   group: agent
   cancel-in-progress: false
 
+# GitHub forces Node 24 for JS actions on June 16, 2026 — mid-competition.
+# Opt in now so the switch is validated before the live week, not during it.
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
+
 permissions:
   contents: write
 
