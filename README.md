@@ -1,87 +1,78 @@
-# Blob
+# Blob 🫧
 
-Agent de trading autonome self-custody pour le [BNB Hack: AI Trading Agent Edition](https://dorahacks.io/hackathon/bnbhack-twt-cmc) (CoinMarketCap × Trust Wallet × BNB Chain) — Track 1, Autonomous Trading Agents.
+**A risk-first autonomous trading agent that survives.** Built for [BNB Hack: AI Trading Agent Edition](https://dorahacks.io/hackathon/bnbhack-twt-cmc) (CoinMarketCap × Trust Wallet × BNB Chain) — Track 1, Autonomous Trading Agents.
 
-> **Statut : pipeline paper fonctionnel + backtest.** Data → stratégie → risk → ordres → exécution simulée, couvert par des tests unitaires ; backtest keyless (klines Binance + Fear & Greed historique) qui rejoue le code de décision de production. L'exécution live via TWAK CLI est écrite mais **non testée** (CLI non installé) ; la registration on-chain et l'intégration x402/ERC-8004 ne sont pas commencées. Voir [docs/redteam.md](docs/redteam.md) pour l'analyse de risques qui a fixé ces décisions.
+Most trading agents die in their first week: drawdown disqualification, overtrading into the cost floor, or an execution failure that misses the mandatory daily trade. Blob is engineered around the opposite premise — **in a 7-day live PnL competition, not blowing up is the highest-EV strategy** — and every design decision below is backtested against 358 competition-format windows.
 
-## Utilisation
+## On-chain proof (everything below is real, BSC mainnet)
+
+| Claim | Proof |
+|---|---|
+| Agent wallet (self-custody, TWAK-created) | [`0x84BFC511d8027337B285433f122880fB340f30B9`](https://bscscan.com/address/0x84BFC511d8027337B285433f122880fB340f30B9) |
+| Competition registration | [`0x9bfc02…ae0fbc`](https://bscscan.com/tx/0x9bfc02ddef61a097061afe9a1014b43e20fb13b64b6d72cd129e7004f6ae0fbc) |
+| TWAK swap execution, buy leg | [`0x080ddd…90b877`](https://bscscan.com/tx/0x080ddda1faa6e9564c548874d862daeb697748874233e6190f24a4abbd90b877) |
+| TWAK swap execution, sell leg | [`0xeda75e…2ae4c0`](https://bscscan.com/tx/0xeda75e7a880d193e6c6fa81dff37e982a32a6cd8d766205867f14159982ae4c0) |
+| x402 pay-per-request data (Permit2 approval; $0.01 USDT per request, paid on BSC) | [`0x2b6888…397bfd`](https://bscscan.com/tx/0x2b688866ea909e29aa3d03792146210df5157c314060579727fc866f7d397bfd) |
+| ERC-8004 agent identity, `agentId 132858`, owned by the trading wallet | [`0x14a6f4…a25103`](https://bscscan.com/tx/0x14a6f4c62986e60aaed77b3cfc7dafd41ef0b9814d6365c33531f8a4c7a25103) |
+| Hourly audit trail (every decision, order and x402 payment) | [`agent-state` branch](https://github.com/RedGnad/Blob/tree/agent-state) |
+
+## How it works
+
+```
+CMC market data ──────────► strategy: regime filter (BTC trend + Fear&Greed)
+ (API key feed +                      + cost-aware momentum selection
+  x402 pay-per-request                      │
+  in the trade loop)                        ▼
+                              risk engine — last gate before signing:
+                              drawdown ladder (-10% halve / -18% flatten,
+                              official DQ is ~30%), token allowlist,
+                              balance clamps, daily-trade guarantee
+                                            │
+                                            ▼
+                              TWAK — sole execution layer:
+                              local signing, swaps, x402, ERC-8004
+                              (keys never leave the wallet store)
+```
+
+- **Deterministic core.** No LLM in the decision path: regime and momentum rules are pure functions with 33 unit tests. Reproducible, auditable, no nondeterministic blow-ups.
+- **Hourly risk / daily strategy split.** Strategy rebalances once a day (00:00 UTC); every other hour is a risk-only check so the drawdown ladder acts intraday. Backtest before this fix: 1 window in 358 hit the 30% DQ. After: zero, worst window 21.5%.
+- **Cost-aware entries.** Real round-trip execution costs were measured per token at our trade size via TWAK quotes (`blob costs`): 1.27%–1.89%, median 1.4%, PENDLE 3.36%. A token only enters the book if its momentum clears **2× its own measured round-trip cost**. Anti-churn hysteresis (exit floor + retention bonus) cut turnover ~30%.
+- **Qualification is engineered, not hoped for.** The competition requires ≥1 trade/day. Any successful cycle of the day fires a buffered micro-trade if the strategy was idle — including selling a sliver when fully deployed. Up to 23 retry opportunities per day via the hourly scheduler.
+- **The chain is the truth.** In live mode, holdings are re-synced from BSC every cycle; prices fall back to last-known on feed gaps (a missing price must never look like a crash).
+
+## Backtest — competition format, not vanity curves
+
+358 independent 7-day windows (fresh capital, fresh drawdown peak — exactly how the contest scores), hourly marks, measured costs, over a year where ETH buy-and-hold did **-42%**:
+
+| Metric (7-day windows) | Blob |
+|---|---|
+| Median | -1.7% |
+| p90 / max | +6.7% / +20.6% |
+| Disqualification rate (30% DD) | **0%** |
+| Worst window drawdown | 21.5% |
+| Avg trades per window | 6.3 |
+
+Run it yourself, no API key needed: `python -m blob backtest --days 365` (public Binance klines + Fear & Greed history, replaying the exact production decision code).
+
+## Sponsor stack — used as the heart, not bolted on
+
+- **Trust Wallet Agent Kit**: sole execution layer. Local signing through the whole loop (keys created by and stored in TWAK, password in OS keychain / `TWAK_WALLET_PASSWORD` headless), swaps with slippage caps, **native x402** paying $0.01 per data request from the trading balance (BSC, Permit2), **ERC-8004 identity** minted and owned by the trading wallet itself.
+- **CoinMarketCap AI Agent Hub**: quotes + Fear & Greed drive the regime filter; the daily rebalance pays for its data via the CMC x402 endpoint and cross-checks it against the free feed (active-token filtering guards against ticker-squatting memecoins in v3 responses).
+- **BNB Chain**: all execution, registration, identity and payments settle on BSC.
+
+## Run it
 
 ```bash
 python3 -m venv .venv && .venv/bin/pip install -e ".[dev]"
-.venv/bin/python -m blob doctor     # vérifie la config (n'affiche jamais les secrets)
-.venv/bin/python -m blob run-once   # un cycle complet (MODE=paper par défaut)
-.venv/bin/python -m blob status     # valeur, drawdown, positions
-.venv/bin/python -m blob backtest --days 90   # rejoue le code de décision sur l'historique (sans clé)
-.venv/bin/python -m blob backtest --days 365 --compare   # baseline vs fast-lane, format compétition
-.venv/bin/python -m blob loop       # runner 24/7 : cycle horaire, retries, alertes desktop
-.venv/bin/pytest                    # tests
+cp .env.example .env                          # fill: CMC key, TWAK credentials
+.venv/bin/python -m blob doctor               # config check (never prints secrets)
+.venv/bin/python -m blob run-once             # one full cycle (paper by default)
+.venv/bin/python -m blob backtest --days 90   # keyless backtest
+.venv/bin/python -m blob costs --usd 5        # measure real execution costs
+.venv/bin/python -m blob loop                 # 24/7 local runner
+.venv/bin/pytest                              # 33 tests
 ```
 
-## Runbook semaine live (22-28 juin)
+**Ops:** the production scheduler is a GitHub Actions hourly workflow (`.github/workflows/agent.yml`) — state persists on the [`agent-state`](https://github.com/RedGnad/Blob/tree/agent-state) branch, failed runs alert by email and self-heal next hour. A local LaunchAgent (`ops/`) is the warm backup; only one executor runs live at a time. Mode switch is one repo variable: `AGENT_MODE=paper|live`.
 
-**Scheduler primaire : GitHub Actions** (`.github/workflows/agent.yml`, cron horaire,
-gratuit sur repo public, état persisté sur la branche `agent-state`). Secrets requis
-dans Settings → Secrets and variables → Actions : `CMC_API_KEY`, `TWAK_ACCESS_ID`,
-`TWAK_HMAC_SECRET`, `TWAK_WALLET_PASSWORD`, `TWAK_HOME_B64` (tar.gz de `~/.twak` en
-base64). Variables : `AGENT_MODE` (paper→live le 22 juin), `X402_ENABLED`.
-GitHub notifie par email si un run échoue ; chaque heure suivante réessaie
-automatiquement (le trade quotidien se rattrape à n'importe quel cycle du jour).
-
-⚠️ Un seul exécuteur en mode live à la fois : si Actions est primaire, le LaunchAgent
-local reste en backup **déchargé** (à activer manuellement si GitHub tombe).
-
-**Scheduler de secours : LaunchAgent local**
-
-1. Lancer le runner via LaunchAgent (survit aux crashs et au login) :
-   ```bash
-   cp ops/com.blob.agent.plist ~/Library/LaunchAgents/
-   launchctl load ~/Library/LaunchAgents/com.blob.agent.plist
-   ```
-   Arrêt : `launchctl unload ~/Library/LaunchAgents/com.blob.agent.plist`
-2. **La machine ne doit pas dormir** : `caffeinate -s` dans un terminal, ou réglages
-   Économie d'énergie. Un jour sans trade = disqualification.
-3. Vérification quotidienne (1 min) : `python -m blob status` + le trade du jour
-   visible sur [BscScan](https://bscscan.com/address/0x84BFC511d8027337B285433f122880fB340f30B9),
-   gas BNB > 0.001, et les pins du Telegram du hackathon.
-4. Secours manuel si le runner est mort et qu'aucun trade n'est passé aujourd'hui :
-   `twak swap USDT ETH --usd 1.10 --chain bsc` (puis investiguer).
-
-## Architecture cible
-
-```
-CMC Agent Hub (MCP + x402) ──► datafeed ──► strategy (regime/momentum, déterministe)
-                                                │
-                                           risk engine (DD ladder -10%/-18%, allowlist
-                                           ~20-30 tokens liquides, caps par trade/jour)
-                                                │
-                                           executor ── TWAK (signature locale, seule
-                                                │       couche d'exécution; fallback
-                                                │       PancakeSwap direct flaggé)
-                                           scheduler (trade quotidien obligatoire
-                                           00:30 UTC, retries, alerting)
-```
-
-## Décisions verrouillées (issues de la red team)
-
-- **Spot only**, univers restreint aux tokens liquides de la liste éligible (149 BEP-20) — robuste au ruling perps en attente.
-- **Turnover minimal** : 2-4 vraies rotations sur la semaine de trading + micro-trades de qualification quotidiens. Plancher de coût réel mesuré ~1.4 % round-trip → seuil d'entrée : edge attendu > 2 %.
-- **Cœur déterministe**, LLM cantonné au scoring de données molles (sentiment/news), guardrails appliqués hors LLM avant signature.
-- **Switch `MODE=paper|live`** dès le départ (règles de l'event encore mouvantes).
-- **De-risking ladder** : -10 % → exposition réduite de moitié ; -18 % → tout en USDT jusqu'à la fin (DQ officielle ~30 %).
-- Intégrations sponsors réelles uniquement : TWAK (exécution + guardrails + x402), CMC (data MCP + x402 payé en USDC sur Base), BNB Agent SDK (identité ERC-8004 de l'agent). Rien de cosmétique.
-
-## Dates (2026)
-
-| Échéance | Date |
-|---|---|
-| Inscription on-chain (`twak compete register`) | avant le 22 juin — **viser cette semaine** |
-| Soumission DoraHacks (repo + stratégie) | 21 juin |
-| Fenêtre de trading live | 22–28 juin (min 1 trade/jour, 7/7) |
-
-## Prérequis (non commités)
-
-Copier `.env.example` → `.env` et remplir :
-
-- **TWAK** : Access ID + HMAC Secret depuis [portal.trustwallet.com](https://portal.trustwallet.com)
-- **CMC** : clé API depuis [pro.coinmarketcap.com](https://pro.coinmarketcap.com) (crédits gratuits distribués aux participants via le Telegram du hackathon)
-- **Wallet** : ~$12-15 USDT/ETH (BSC) + ~$3 BNB gas + ~$5 USDC (Base, pour x402)
+**Status:** dress-rehearsal (paper, 24/7, cloud + local) until the trading window opens June 22; live trading June 22–28. French engineering docs: [risk red team](docs/redteam.md) · [build plan](docs/plan.md) · [strategy explainer](docs/strategy-explainer.md).
