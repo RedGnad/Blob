@@ -82,8 +82,12 @@ jobs:
 
       - name: Run one agent cycle
         env:
-          TWAK_WALLET_PASSWORD: ${{ secrets.TWAK_WALLET_PASSWORD }}
-        run: python -m blob run-once ${{ inputs.rebalance == true && '--rebalance' || '' }}
+          # Defensive trim: `security ... -w | gh secret set` keeps a trailing
+          # newline, which makes wallet decryption fail (WALLET_AUTH_FAILED).
+          TWAK_WALLET_PASSWORD_RAW: ${{ secrets.TWAK_WALLET_PASSWORD }}
+        run: |
+          export TWAK_WALLET_PASSWORD="$(printf '%s' "$TWAK_WALLET_PASSWORD_RAW" | tr -d '\r\n')"
+          python -m blob run-once ${{ inputs.rebalance == true && '--rebalance' || '' }}
 
       - name: Persist state to agent-state branch
         if: always()
