@@ -50,7 +50,9 @@ def fetch_quotes_x402(symbols: list[str], timeout: float = 90.0) -> dict | None:
         log.warning("x402 request failed to run: %s", exc)
         return None
     if result.returncode != 0:
-        log.warning("x402 request failed: %s", result.stderr.strip()[:500])
+        # The twak CLI reports errors as JSON on stdout, not stderr.
+        log.warning("x402 request failed: stdout=%s stderr=%s",
+                    result.stdout.strip()[:500], result.stderr.strip()[:300])
         return None
     try:
         return json.loads(result.stdout)
