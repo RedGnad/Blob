@@ -33,7 +33,9 @@ Inscription on-chain : ✅ faite (11 juin). Deadline soumission DoraHacks (les 2
 4. Agent en paper 24/7 sans interruption ; chaque incident = un fix + un test.
 5. **Premier swap réel** ~$2 dès que le wallet a un peu d'USDT (vérifie le bug Amber route en écriture + `twak wallet register` si les tokens n'apparaissent pas).
 6. Script de mesure de coûts multi-tokens à nos tailles → recalibrer `min_momentum_pct`.
-7. Surveiller les pins Telegram : % vs $ absolu, perps, modèle de coûts simulés, double-track.
+7. Surveiller les pins Telegram : % vs $ absolu, ~~perps~~ (résolu 12 juin : **spot only via
+   l'interface swap TWAK** — trades hors TWAK probablement non comptés), modèle de
+   coûts/fees (réponse promise par la team), double-track.
 
 ### 20-21 juin — soumission
 8. Freeze du code, README anglais, strategy explainer (notre angle : risk-first, guardrails, survie).

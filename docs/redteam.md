@@ -37,9 +37,9 @@ BNB/WBNB ne figure pas dans la liste des 149 tokens in-scope (à re-vérifier su
 La liste contient des tokens à transfer-tax, low-liquidity ou exotiques (SMILEK, GUA, CHEEMS, 币安人生…). Slippage réel énorme, voire honeypot-like.
 - **Mitigation** : allowlist restreinte à ~20-30 tokens vérifiés (liquidité PancakeSwap, pas de taxe) codée dans les guardrails TWAK — double bénéfice : sécurité + points rubrique TWAK (« token allowlists » = critère explicite des 20 pts guardrails).
 
-### R8. Règles mouvantes en cours d'event
-Perps : ruling « en confirmation » ; un participant a demandé une « paper competition » ; le modèle de coûts est en cours de clarification.
-- **Mitigation** : spot-only (robuste quel que soit le ruling perps) ; switch `MODE=paper|live` dans l'architecture dès le départ ; aucune dépendance à une règle non confirmée.
+### R8. Règles mouvantes en cours d'event — partiellement résolu (12 juin)
+~~Perps : ruling « en confirmation »~~ → **tranché par la team BNB (Telegram, 12 juin) : spot only, via l'interface de swap TWAK**. Notre design spot-only TWAK-first était déjà conforme. Conséquence importante : les trades hors interface TWAK (PancakeSwap direct) risquent de ne pas compter au scoring → le fallback `EXECUTOR_FALLBACK` est rétrogradé à assurance-qualification de dernier recours (mieux vaut un retry TWAK qu'un trade hors-scoring). Le modèle de frais reste en attente (« I asked and will let you know »).
+- **Mitigation restante** : switch `MODE=paper|live` ; aucune dépendance à une règle non confirmée ; recalibrer les coûts dès l'annonce des fees.
 
 ### R9. Wallets concurrents publics (et le nôtre aussi)
 Le contrat d'inscription est public : nos trades sont copiables en live, et inversement on peut monitorer les agents rivaux pendant la semaine.

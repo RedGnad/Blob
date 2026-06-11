@@ -19,8 +19,10 @@ import subprocess
 log = logging.getLogger(__name__)
 
 X402_QUOTES_URL = "https://pro-api.coinmarketcap.com/x402/v3/cryptocurrency/quotes/latest"
-# 0.01 of an 18-decimals stablecoin (the BSC route quoted by the CMC endpoint).
-MAX_PAYMENT_ATOMIC = "10000000000000000"
+# BSC-USDT (18 decimals): we pay straight from the trading balance — the CMC
+# endpoint accepts Tether on BSC via permit2 (verified with `twak x402 quote`).
+USDT_BSC = "0x55d398326f99059fF775485246999027B3197955"
+MAX_PAYMENT_ATOMIC = "10000000000000000"  # 0.01 USDT
 
 
 def build_request_cmd(symbols: list[str]) -> list[str]:
@@ -28,8 +30,10 @@ def build_request_cmd(symbols: list[str]) -> list[str]:
     return [
         "twak", "x402", "request", url,
         "--prefer-network", "bsc",
-        "--prefer-method", "eip3009",
+        "--prefer-asset", USDT_BSC,
+        "--prefer-method", "permit2-exact",
         "--max-payment", MAX_PAYMENT_ATOMIC,
+        "--auto-approve",  # one-time Permit2 approval tx on first use, no-op after
         "--yes",
         "--json",
     ]
