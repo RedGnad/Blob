@@ -17,6 +17,11 @@ on:
   schedule:
     - cron: "7 * * * *"   # hourly, offset to dodge top-of-hour runner congestion
   workflow_dispatch:
+    inputs:
+      rebalance:
+        description: "Force a full strategy rebalance (debug/ops)"
+        type: boolean
+        default: false
 
 concurrency:
   group: agent
@@ -78,7 +83,7 @@ jobs:
       - name: Run one agent cycle
         env:
           TWAK_WALLET_PASSWORD: ${{ secrets.TWAK_WALLET_PASSWORD }}
-        run: python -m blob run-once
+        run: python -m blob run-once ${{ inputs.rebalance == true && '--rebalance' || '' }}
 
       - name: Persist state to agent-state branch
         if: always()

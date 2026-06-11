@@ -20,7 +20,9 @@ def doctor() -> None:
 def main() -> None:
     parser = argparse.ArgumentParser(prog="blob", description="Blob trading agent")
     sub = parser.add_subparsers(dest="command", required=True)
-    sub.add_parser("run-once", help="one full cycle: data -> decision -> orders -> execution")
+    ro = sub.add_parser("run-once", help="one full cycle: data -> decision -> orders -> execution")
+    ro.add_argument("--rebalance", action="store_true",
+                    help="force a full strategy rebalance (debug/ops)")
     sub.add_parser("status", help="portfolio value, drawdown, holdings")
     sub.add_parser("loop", help="24/7 runner: hourly cycles, retries, desktop alerts")
     sub.add_parser("doctor", help="check config presence (never prints secret values)")
@@ -56,7 +58,7 @@ def main() -> None:
     cfg = Config.from_env()
 
     if args.command == "run-once":
-        print(json.dumps(run_once(cfg), indent=2))
+        print(json.dumps(run_once(cfg, full_rebalance=True if args.rebalance else None), indent=2))
     elif args.command == "status":
         print(json.dumps(status(cfg), indent=2))
     elif args.command == "loop":
