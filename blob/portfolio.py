@@ -16,6 +16,7 @@ class Portfolio:
     holdings: dict[str, float]          # symbol -> quantity (BASE quantity ~= USD)
     peak_value: float
     last_trade_date: str = ""           # UTC date of last executed trade (R3 daily rule)
+    last_rebalance_date: str = ""       # UTC date of last full strategy rebalance
     last_prices: dict[str, float] = field(default_factory=dict)
     path: Path | None = field(default=None, repr=False)
 
@@ -27,6 +28,7 @@ class Portfolio:
                 holdings=raw["holdings"],
                 peak_value=raw["peak_value"],
                 last_trade_date=raw.get("last_trade_date", ""),
+                last_rebalance_date=raw.get("last_rebalance_date", ""),
                 last_prices=raw.get("last_prices", {}),
                 path=path,
             )
@@ -39,6 +41,7 @@ class Portfolio:
             "holdings": self.holdings,
             "peak_value": self.peak_value,
             "last_trade_date": self.last_trade_date,
+            "last_rebalance_date": self.last_rebalance_date,
             "last_prices": self.last_prices,
         }, indent=2))
 

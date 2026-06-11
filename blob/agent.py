@@ -36,13 +36,19 @@ def make_executor(cfg: Config):
     return TwakCliExecutor(cfg) if cfg.mode == "live" else PaperExecutor(cfg)
 
 
+def should_rebalance(portfolio: Portfolio, now: datetime) -> bool:
+    """First cycle of each UTC day runs the full strategy rebalance.
+    Date-based rather than `hour == 0` on purpose: GitHub cron jitter
+    (observed 40-110 min) can push the midnight run past 01:00 UTC, which
+    would silently skip the whole day's rebalance."""
+    return portfolio.last_rebalance_date != now.date().isoformat()
+
+
 def run_once(cfg: Config, full_rebalance: bool | None = None) -> dict:
-    """One agent cycle. Strategy rebalancing happens once a day (00:00 UTC);
-    every other hourly run is a risk-only check so the drawdown ladder acts
-    intraday instead of waiting for the next daily decision."""
+    """One agent cycle. Strategy rebalancing happens on the first cycle of
+    each UTC day; every other hourly run is a risk-only check so the drawdown
+    ladder acts intraday instead of waiting for the next daily decision."""
     now = datetime.now(timezone.utc)
-    if full_rebalance is None:
-        full_rebalance = now.hour == 0
 
     feed = CmcClient(cfg.cmc_api_key)
     try:
@@ -51,6 +57,8 @@ def run_once(cfg: Config, full_rebalance: bool | None = None) -> dict:
     finally:
         feed.close()
     portfolio = Portfolio.load(STATE_DIR / f"{cfg.mode}_portfolio.json", cfg.paper_start_usdt)
+    if full_rebalance is None:
+        full_rebalance = should_rebalance(portfolio, now)
     if cfg.mode == "live":
         sync_live_holdings(portfolio)
     # Stale-price fallback: a held asset missing from one feed response must
@@ -73,6 +81,7 @@ def run_once(cfg: Config, full_rebalance: bool | None = None) -> dict:
                             divergence * 100, REGIME_ANCHOR)
 
     if full_rebalance:
+        portfolio.last_rebalance_date = now.date().isoformat()
         held = {s for s, q in portfolio.holdings.items() if s != BASE and q > 1e-12}
         decision = target_allocation(quotes, fear_greed, cfg, held)
     else:

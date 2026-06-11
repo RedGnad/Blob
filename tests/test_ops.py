@@ -40,6 +40,21 @@ def test_x402_parse_returns_none_when_no_active_match():
     assert parse_quotes({"data": []}, "ETH") is None
 
 
+def test_rebalance_is_date_based_not_hour_based():
+    # GitHub cron jitter can push the "midnight" run past 01:00 UTC; the
+    # rebalance must key on the UTC date, not on hour == 0.
+    from blob.agent import should_rebalance
+    from blob.portfolio import Portfolio
+
+    pf = Portfolio(holdings={}, peak_value=0.0)
+    late_run = datetime(2026, 6, 22, 1, 42, tzinfo=timezone.utc)
+    assert should_rebalance(pf, late_run)                      # never rebalanced
+    pf.last_rebalance_date = "2026-06-21"
+    assert should_rebalance(pf, late_run)                      # yesterday -> due
+    pf.last_rebalance_date = "2026-06-22"
+    assert not should_rebalance(pf, late_run)                  # already done today
+
+
 def test_seconds_until_next_hour():
     now = datetime(2026, 6, 22, 10, 59, 0, tzinfo=timezone.utc)
     assert abs(seconds_until_next_hour(now) - 60.0) < 1e-6
