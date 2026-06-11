@@ -25,9 +25,11 @@ Inscription on-chain : ✅ faite (11 juin). Deadline soumission DoraHacks (les 2
    exclu pour le wallet de trading). Le SDK `bnbagent` sera utilisé pour l'agentURI,
    les lectures, et éventuellement une démo ERC-8183 sur testnet (gas-free MegaFuel)
    comme angle "inventif" du special BNB SDK.
-3. ✅ **Scheduler 24/7** : `blob loop` (cycle horaire aligné, 3 retries espacés de 3 min,
-   notification desktop macOS en cas d'échec total) + LaunchAgent `ops/com.blob.agent.plist`
-   + runbook dans le README (incl. anti-sleep et secours manuel).
+3. ✅ **Scheduler 24/7** : primaire = **GitHub Actions** (cron horaire, gratuit repo public,
+   état sur branche `agent-state`, wallet headless via `TWAK_WALLET_PASSWORD` — portabilité
+   vérifiée) ; secours = LaunchAgent local `ops/com.blob.agent.plist` + `blob loop`.
+   Un seul exécuteur live à la fois. Reste : créer les 5 secrets + 2 variables sur GitHub
+   (action utilisateur) et valider un run via workflow_dispatch.
 
 ### 15-20 juin — répétition générale (le vrai détecteur de flaws)
 4. Agent en paper 24/7 sans interruption ; chaque incident = un fix + un test.

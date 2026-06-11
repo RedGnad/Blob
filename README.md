@@ -19,6 +19,19 @@ python3 -m venv .venv && .venv/bin/pip install -e ".[dev]"
 
 ## Runbook semaine live (22-28 juin)
 
+**Scheduler primaire : GitHub Actions** (`.github/workflows/agent.yml`, cron horaire,
+gratuit sur repo public, état persisté sur la branche `agent-state`). Secrets requis
+dans Settings → Secrets and variables → Actions : `CMC_API_KEY`, `TWAK_ACCESS_ID`,
+`TWAK_HMAC_SECRET`, `TWAK_WALLET_PASSWORD`, `TWAK_HOME_B64` (tar.gz de `~/.twak` en
+base64). Variables : `AGENT_MODE` (paper→live le 22 juin), `X402_ENABLED`.
+GitHub notifie par email si un run échoue ; chaque heure suivante réessaie
+automatiquement (le trade quotidien se rattrape à n'importe quel cycle du jour).
+
+⚠️ Un seul exécuteur en mode live à la fois : si Actions est primaire, le LaunchAgent
+local reste en backup **déchargé** (à activer manuellement si GitHub tombe).
+
+**Scheduler de secours : LaunchAgent local**
+
 1. Lancer le runner via LaunchAgent (survit aux crashs et au login) :
    ```bash
    cp ops/com.blob.agent.plist ~/Library/LaunchAgents/

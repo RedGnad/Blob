@@ -1,0 +1,88 @@
+# Cloud scheduler for the Blob agent — free on public repos, no card needed.
+#
+# Why GitHub Actions works for this competition: the daily mandatory trade
+# fires on ANY successful cycle of the day (run_once retries it every hour
+# until done), so the 5-15 min cron jitter of hosted runners is harmless.
+# Agent state (portfolio peak, last trade date, audit log) persists on the
+# orphan branch `agent-state`.
+#
+# Required repository secrets (Settings > Secrets and variables > Actions):
+#   CMC_API_KEY, TWAK_ACCESS_ID, TWAK_HMAC_SECRET,
+#   TWAK_WALLET_PASSWORD, TWAK_HOME_B64 (= tar.gz of ~/.twak, base64)
+# Repository variables: AGENT_MODE (paper|live), X402_ENABLED (0|1)
+
+name: agent
+
+on:
+  schedule:
+    - cron: "7 * * * *"   # hourly, offset to dodge top-of-hour runner congestion
+  workflow_dispatch:
+
+concurrency:
+  group: agent
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+
+jobs:
+  cycle:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Install agent and TWAK CLI
+        run: |
+          pip install -q -e .
+          npm install -g --silent @trustwallet/cli
+          twak --version
+
+      - name: Configure (secrets never echoed)
+        run: |
+          install -m 600 /dev/null .env
+          {
+            echo "CMC_API_KEY=${{ secrets.CMC_API_KEY }}"
+            echo "TWAK_ACCESS_ID=${{ secrets.TWAK_ACCESS_ID }}"
+            echo "TWAK_HMAC_SECRET=${{ secrets.TWAK_HMAC_SECRET }}"
+            echo "AGENT_WALLET_ADDRESS=0x84BFC511d8027337B285433f122880fB340f30B9"
+            echo "MODE=${{ vars.AGENT_MODE || 'paper' }}"
+            echo "X402_ENABLED=${{ vars.X402_ENABLED || '0' }}"
+          } > .env
+          mkdir -p ~/.twak
+          echo "${{ secrets.TWAK_HOME_B64 }}" | base64 -d | tar -xz -C ~/.twak
+
+      - name: Restore state from agent-state branch
+        run: |
+          mkdir -p state logs
+          if git ls-remote --exit-code --heads origin agent-state >/dev/null 2>&1; then
+            git fetch -q --depth=1 origin agent-state
+            git --work-tree=state checkout -q FETCH_HEAD -- .
+            git reset -q  # keep the index clean for the main working tree
+            [ -f state/agent.jsonl ] && mv state/agent.jsonl logs/agent.jsonl
+          fi
+
+      - name: Run one agent cycle
+        env:
+          TWAK_WALLET_PASSWORD: ${{ secrets.TWAK_WALLET_PASSWORD }}
+        run: python -m blob run-once
+
+      - name: Persist state to agent-state branch
+        if: always()
+        run: |
+          [ -f logs/agent.jsonl ] && cp logs/agent.jsonl state/agent.jsonl
+          cd state
+          git init -q -b agent-state
+          git config user.name "blob-agent"
+          git config user.email "blob-agent@users.noreply.github.com"
+          git add -A
+          git commit -qm "state $(date -u +%FT%TZ)" || exit 0
+          git push -q -f "https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}.git" agent-state
