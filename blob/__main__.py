@@ -29,12 +29,19 @@ def main() -> None:
     bt.add_argument("--fast-lane", action="store_true")
     bt.add_argument("--compare", action="store_true",
                     help="run baseline AND fast-lane on the same data")
+    costs = sub.add_parser("costs", help="measure real round-trip costs via twak quotes")
+    costs.add_argument("--usd", type=float, default=5.0)
     args = parser.parse_args()
 
     logging.basicConfig(level=logging.INFO, format="%(levelname)s %(name)s: %(message)s")
 
     if args.command == "doctor":
         doctor()
+        return
+
+    if args.command == "costs":
+        from .costs import measure_all
+        print(json.dumps(measure_all(usd=args.usd), indent=2))
         return
 
     if args.command == "backtest":

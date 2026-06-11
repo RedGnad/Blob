@@ -17,7 +17,7 @@ from dataclasses import dataclass
 
 from .config import Config
 from .portfolio import Portfolio
-from .universe import ALLOWLIST, BASE
+from .universe import ALLOWLIST, BASE, twak_token
 
 log = logging.getLogger(__name__)
 
@@ -175,7 +175,8 @@ class TwakCliExecutor:
         if usd_amount < 0.5:
             log.warning("order below dust floor after balance clamp, skipping: %s", order)
             return False
-        src, dst = (BASE, order.symbol) if order.side == "buy" else (order.symbol, BASE)
+        token = twak_token(order.symbol)
+        src, dst = (BASE, token) if order.side == "buy" else (token, BASE)
         cmd = ["twak", "swap", src, dst, "--usd", f"{usd_amount:.2f}",
                "--chain", "bsc", "--slippage", "1", "--json"]
         log.info("twak: %s", " ".join(cmd))

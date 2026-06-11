@@ -12,7 +12,7 @@ from dataclasses import dataclass, field
 
 from .config import Config
 from .datafeed import Quote
-from .universe import ALLOWLIST, BASE, REGIME_ANCHOR
+from .universe import ALLOWLIST, BASE, DEFAULT_RT_COST_PCT, REGIME_ANCHOR, RT_COST_PCT
 
 
 @dataclass(frozen=True)
@@ -57,7 +57,12 @@ def select_candidates(
     for symbol in ALLOWLIST:
         if symbol not in quotes:
             continue
-        floor = cfg.exit_momentum_pct if symbol in held else cfg.min_momentum_pct
+        if symbol in held:
+            floor = cfg.exit_momentum_pct
+        else:
+            # Cost-aware entry: expensive tokens must earn their round-trip.
+            rt_cost = RT_COST_PCT.get(symbol, DEFAULT_RT_COST_PCT)
+            floor = max(cfg.min_momentum_pct, cfg.cost_floor_mult * rt_cost)
         if momentum_score(quotes[symbol]) >= floor:
             eligible.append(quotes[symbol])
 

@@ -40,6 +40,7 @@ class Config:
     paper_start_usdt: float = 15.0
     cost_per_side: float = 0.007        # ~1.4% round-trip measured on BSC via TWAK
     min_momentum_pct: float = 2.0       # entry: expected edge must clear the cost floor
+    cost_floor_mult: float = 2.0        # entry floor = max(min_momentum, mult * measured RT cost)
     exit_momentum_pct: float = 0.0      # exit floor for already-held assets (anti-churn)
     retention_bonus_pct: float = 2.0    # challenger must beat a held asset by this margin
     top_k: int = 2

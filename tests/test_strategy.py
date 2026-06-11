@@ -56,6 +56,14 @@ def test_target_allocation_sums_to_one():
     assert decision.weights["ETH"] == 1.0
 
 
+def test_cost_aware_entry_floor_blocks_expensive_tokens():
+    # PENDLE round-trip costs 3.36% -> entry floor 6.72%; ETH (1.27%) -> 2.54%.
+    quotes = {"PENDLE": q("PENDLE", pct_24h=5.0, pct_7d=5.0),
+              "ETH": q("ETH", pct_24h=5.0, pct_7d=5.0)}
+    picks = select_candidates(quotes, CFG)
+    assert [p.symbol for p in picks] == ["ETH"]
+
+
 def test_held_asset_survives_with_lower_exit_floor():
     quotes = {"ETH": q("ETH", pct_24h=1.0, pct_7d=1.0)}  # score 1.0: below entry, above exit
     assert select_candidates(quotes, CFG) == []
