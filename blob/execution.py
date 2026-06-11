@@ -58,6 +58,19 @@ def plan_orders(
     return orders
 
 
+def clamp_order_usd(
+    order: Order, prices: dict[str, float], holdings: dict[str, float], margin: float = 0.98
+) -> float:
+    """Cap an order to what the wallet actually holds, with a margin for
+    spread and price drift. Selling $2.00 of ETH while holding $1.99 reverts
+    on-chain (verified live, tx 0x427164...f83c7c); the margin prevents it."""
+    if order.side == "sell":
+        held_usd = holdings.get(order.symbol, 0.0) * prices.get(order.symbol, 0.0)
+    else:
+        held_usd = holdings.get(BASE, 0.0)
+    return min(order.usd_amount, held_usd * margin)
+
+
 def micro_qualification_order(
     cfg: Config, portfolio: Portfolio, prices: dict[str, float]
 ) -> Order | None:
@@ -158,8 +171,12 @@ class TwakCliExecutor:
         self.cfg = cfg
 
     def execute(self, order: Order, prices: dict[str, float], portfolio: Portfolio) -> bool:
+        usd_amount = clamp_order_usd(order, prices, portfolio.holdings)
+        if usd_amount < 0.5:
+            log.warning("order below dust floor after balance clamp, skipping: %s", order)
+            return False
         src, dst = (BASE, order.symbol) if order.side == "buy" else (order.symbol, BASE)
-        cmd = ["twak", "swap", src, dst, "--usd", f"{order.usd_amount:.2f}",
+        cmd = ["twak", "swap", src, dst, "--usd", f"{usd_amount:.2f}",
                "--chain", "bsc", "--slippage", "1", "--json"]
         log.info("twak: %s", " ".join(cmd))
         result = subprocess.run(cmd, capture_output=True, text=True, timeout=120)

@@ -16,6 +16,30 @@ def test_x402_cmd_pays_capped_usdt_on_bsc():
     assert "--password" not in cmd
 
 
+def test_x402_parse_filters_dead_ticker_squatters():
+    from blob.x402 import parse_quotes
+    payload = {
+        "data": [
+            {"symbol": "ETH", "is_active": 0, "id": 2,
+             "quote": [{"symbol": "USD", "price": 0.001, "market_cap": 1}]},
+            {"symbol": "ETH", "is_active": 1, "id": 1027,
+             "quote": [{"symbol": "USD", "price": 1643.85, "market_cap": 2e11,
+                        "percent_change_24h": -0.28, "percent_change_7d": -7.1,
+                        "last_updated": "2026-06-11T16:37:04.000Z"}]},
+            {"symbol": "ETH", "is_active": 1, "id": 9999,
+             "quote": [{"symbol": "USD", "price": 5.0, "market_cap": 1e6}]},
+        ],
+        "status": {"credit_count": 1},
+    }
+    out = parse_quotes(payload, "ETH")
+    assert out["cmc_id"] == 1027 and out["price"] == 1643.85 and out["credit_count"] == 1
+
+
+def test_x402_parse_returns_none_when_no_active_match():
+    from blob.x402 import parse_quotes
+    assert parse_quotes({"data": []}, "ETH") is None
+
+
 def test_seconds_until_next_hour():
     now = datetime(2026, 6, 22, 10, 59, 0, tzinfo=timezone.utc)
     assert abs(seconds_until_next_hour(now) - 60.0) < 1e-6

@@ -1,5 +1,11 @@
 from blob.config import Config
-from blob.execution import Order, PaperExecutor, micro_qualification_order, plan_orders
+from blob.execution import (
+    Order,
+    PaperExecutor,
+    clamp_order_usd,
+    micro_qualification_order,
+    plan_orders,
+)
 from blob.portfolio import Portfolio
 from blob.universe import BASE
 
@@ -78,6 +84,24 @@ def test_stale_price_fallback_avoids_fake_crash():
     # Next cycle the feed misses ETH: last known price must be used.
     prices = pf.update_prices({})
     assert pf.value(prices) == 15.0
+
+
+def test_sell_clamped_to_held_balance():
+    # Live-verified failure mode: selling $2.00 while holding $1.99 reverts.
+    order = Order("sell", "ETH", 2.0)
+    usd = clamp_order_usd(order, {"ETH": 1644.0}, {"ETH": 0.00121})
+    assert usd <= 0.00121 * 1644.0 * 0.98
+    assert usd < 2.0
+
+
+def test_buy_clamped_to_base_balance():
+    order = Order("buy", "ETH", 10.0)
+    assert clamp_order_usd(order, {"ETH": 1.0}, {BASE: 5.0}) == 5.0 * 0.98
+
+
+def test_clamp_leaves_small_orders_alone():
+    order = Order("sell", "ETH", 1.1)
+    assert clamp_order_usd(order, {"ETH": 1.0}, {"ETH": 100.0}) == 1.1
 
 
 def test_round_trip_loses_about_double_cost():

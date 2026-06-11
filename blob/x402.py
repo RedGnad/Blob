@@ -57,3 +57,32 @@ def fetch_quotes_x402(symbols: list[str], timeout: float = 90.0) -> dict | None:
     except json.JSONDecodeError:
         log.warning("x402 response is not JSON: %s", result.stdout.strip()[:200])
         return None
+
+
+def parse_quotes(payload: dict, symbol: str) -> dict | None:
+    """Extract a compact quote from a CMC v3 x402 response.
+
+    v3 returns a LIST of every token sharing the ticker — including dead
+    memecoins squatting major symbols — so we must keep only active entries
+    and take the highest market cap. The returned dict is small on purpose:
+    it goes to the audit log every day."""
+    candidates = []
+    for item in payload.get("data", []):
+        if item.get("symbol") != symbol or not item.get("is_active"):
+            continue
+        usd = next((q for q in item.get("quote", []) if q.get("symbol") == "USD"), None)
+        if not usd or not usd.get("price"):
+            continue
+        candidates.append((usd.get("market_cap") or 0.0, item, usd))
+    if not candidates:
+        return None
+    _, item, usd = max(candidates, key=lambda c: c[0])
+    return {
+        "symbol": symbol,
+        "cmc_id": item.get("id"),
+        "price": usd["price"],
+        "pct_24h": usd.get("percent_change_24h"),
+        "pct_7d": usd.get("percent_change_7d"),
+        "last_updated": usd.get("last_updated"),
+        "credit_count": payload.get("status", {}).get("credit_count"),
+    }
