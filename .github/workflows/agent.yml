@@ -15,7 +15,12 @@ name: agent
 
 on:
   schedule:
-    - cron: "7 * * * *"   # hourly, offset to dodge top-of-hour runner congestion
+    # Requested every 30 min, but GitHub delays/batches scheduled runs under
+    # load — observed effective cadence on this repo is ~2h at hourly request.
+    # Over-requesting pulls the effective interval down toward ~1h, which the
+    # intraday drawdown ladder needs. Runs are idempotent (date-based rebalance,
+    # concurrency group below), so extra triggers are harmless.
+    - cron: "*/30 * * * *"
   workflow_dispatch:
     inputs:
       rebalance:
