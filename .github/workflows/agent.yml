@@ -43,7 +43,7 @@ permissions:
 jobs:
   cycle:
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 260   # internal loop: 8 cycles × 30 min ≈ 3.5h
     steps:
       - uses: actions/checkout@v4
 
@@ -85,23 +85,36 @@ jobs:
             [ -f state/agent.jsonl ] && mv state/agent.jsonl logs/agent.jsonl
           fi
 
-      - name: Run one agent cycle
+      # Internal cycle loop: GitHub throttles scheduled workflows to ~2h
+      # regardless of the cron frequency (measured on this repo). Running
+      # several cycles per job, 30 min apart, decouples our effective cadence
+      # from GitHub's trigger throttling — the intraday drawdown ladder needs
+      # it. State is pushed after each cycle so a mid-loop failure loses nothing.
+      - name: Run agent cycles
         env:
           # Defensive trim: `security ... -w | gh secret set` keeps a trailing
           # newline, which makes wallet decryption fail (WALLET_AUTH_FAILED).
           TWAK_WALLET_PASSWORD_RAW: ${{ secrets.TWAK_WALLET_PASSWORD }}
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
         run: |
           export TWAK_WALLET_PASSWORD="$(printf '%s' "$TWAK_WALLET_PASSWORD_RAW" | tr -d '\r\n')"
-          python -m blob run-once ${{ inputs.rebalance == true && '--rebalance' || '' }}
-
-      - name: Persist state to agent-state branch
-        if: always()
-        run: |
-          [ -f logs/agent.jsonl ] && cp logs/agent.jsonl state/agent.jsonl
-          cd state
-          git init -q -b agent-state
-          git config user.name "blob-agent"
-          git config user.email "blob-agent@users.noreply.github.com"
-          git add -A
-          git commit -qm "state $(date -u +%FT%TZ)" || exit 0
-          git push -q -f "https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}.git" agent-state
+          rebalance_flag="${{ inputs.rebalance == true && '--rebalance' || '' }}"
+          interval_min=30
+          max_cycles=8
+          for i in $(seq 1 "$max_cycles"); do
+            echo "::group::cycle $i/$max_cycles"
+            python -m blob run-once $rebalance_flag || echo "cycle $i failed, continuing"
+            [ -f logs/agent.jsonl ] && cp logs/agent.jsonl state/agent.jsonl
+            ( cd state
+              git init -q -b agent-state
+              git config user.name "blob-agent"
+              git config user.email "blob-agent@users.noreply.github.com"
+              git add -A
+              git commit -qm "state $(date -u +%FT%TZ)" || true
+              git push -q -f "https://x-access-token:${GH_TOKEN}@github.com/${REPO}.git" agent-state || true
+            )
+            echo "::endgroup::"
+            rebalance_flag=""   # a forced rebalance applies to the first cycle only
+            [ "$i" -lt "$max_cycles" ] && sleep $((interval_min * 60))
+          done
