@@ -22,6 +22,7 @@ from .execution import (
 )
 from .portfolio import Portfolio
 from .strategy import Decision, target_allocation
+from .attest import attest_onchain, attest_payload, decision_digest
 from .x402 import fetch_quotes_x402
 from .x402 import parse_quotes as parse_x402_quotes
 from .universe import ALLOWLIST, BASE, REGIME_ANCHOR
@@ -141,6 +142,16 @@ def run_once(cfg: Config, full_rebalance: bool | None = None) -> dict:
         "holdings": {s: round(q, 8) for s, q in portfolio.holdings.items()},
         "x402": x402_proof,
     }
+
+    # On-chain attestation of the daily decision (isolated: never blocks a trade).
+    if full_rebalance and cfg.attest_enabled and cfg.mode == "live":
+        payload = attest_payload(summary)
+        digest = decision_digest(payload)
+        key = f"d-{now.date().isoformat()}"
+        tx = attest_onchain(cfg.erc8004_agent_id, key, digest)
+        summary["attest"] = {"key": key, "digest": digest, "tx": tx}
+        log.info("decision attested: %s = %s (tx %s)", key, digest[:18], tx)
+
     _append_log(summary)
     return summary
 

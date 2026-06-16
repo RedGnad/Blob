@@ -32,6 +32,8 @@ class Config:
     mode: str = "paper"  # paper | live
     executor_fallback: bool = False
     x402_enabled: bool = False  # pay-per-request data via TWAK x402 (needs funded wallet)
+    attest_enabled: bool = False  # commit each daily decision on-chain (ERC-8004 metadata)
+    erc8004_agent_id: int = 132858  # our minted agent identity (tx 0x14a6f4…a25103)
     twak_access_id: str = field(default="", repr=False)
     twak_hmac_secret: str = field(default="", repr=False)
     agent_wallet_address: str = ""
@@ -95,6 +97,7 @@ class Config:
             mode=mode,
             executor_fallback=os.environ.get("EXECUTOR_FALLBACK", "0").strip() == "1",
             x402_enabled=os.environ.get("X402_ENABLED", "0").strip() == "1",
+            attest_enabled=os.environ.get("ATTEST_ENABLED", "0").strip() == "1",
             # Discretionary: arm only if the live week opens strongly risk-on
             # (concentrates in the single best momentum asset; buys the fat
             # right tail at lower DD because strong risk-on weeks are uptrends).

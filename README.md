@@ -14,6 +14,7 @@ Most trading agents die in their first week: drawdown disqualification, overtrad
 | TWAK swap execution, sell leg | [`0xeda75e…2ae4c0`](https://bscscan.com/tx/0xeda75e7a880d193e6c6fa81dff37e982a32a6cd8d766205867f14159982ae4c0) |
 | x402 pay-per-request data (Permit2 approval; $0.01 USDT per request, paid on BSC) | [`0x2b6888…397bfd`](https://bscscan.com/tx/0x2b688866ea909e29aa3d03792146210df5157c314060579727fc866f7d397bfd) |
 | ERC-8004 agent identity, `agentId 132858`, owned by the trading wallet | [`0x14a6f4…a25103`](https://bscscan.com/tx/0x14a6f4c62986e60aaed77b3cfc7dafd41ef0b9814d6365c33531f8a4c7a25103) |
+| On-chain decision attestation (digest committed as ERC-8004 metadata) | [`0xc9460f…c23b07`](https://bscscan.com/tx/0xc9460f77e6e61ba08fd7ddd8d9a67d46a973ae39abe76a5949349f480ac23b07) |
 | Hourly audit trail (every decision, order and x402 payment) | [`agent-state` branch](https://github.com/RedGnad/Blob/tree/agent-state) |
 
 ## How it works
@@ -39,6 +40,7 @@ CMC market data ──────────► strategy: regime filter (BTC t
 - **Cost-aware entries.** Real round-trip execution costs were measured per token at our trade size via TWAK quotes (`blob costs`): 1.27%–1.89%, median 1.4%, PENDLE 3.36%. A token only enters the book if its momentum clears **2× its own measured round-trip cost**. Anti-churn hysteresis (exit floor + retention bonus) cut turnover ~30%.
 - **Qualification is engineered, not hoped for.** The competition requires ≥1 trade/day. Any successful cycle of the day fires a buffered micro-trade if the strategy was idle — including selling a sliver when fully deployed. Up to 23 retry opportunities per day via the hourly scheduler.
 - **The chain is the truth.** In live mode, holdings are re-synced from BSC every cycle; prices fall back to last-known on feed gaps (a missing price must never look like a crash).
+- **Tamper-evident decisions.** Each daily decision is hashed (SHA-256 of its canonical JSON) and committed on-chain as metadata on the agent's own ERC-8004 identity. Anyone can take a decision from the audit log, recompute the digest, and check it against the chain — a recompute-it-yourself track record that proves the decisions weren't fabricated after the fact. Verify: `twak erc8004 get-metadata 132858 --key d-<UTC-date> --chain bsc`.
 
 ## Backtest — competition format, not vanity curves
 
