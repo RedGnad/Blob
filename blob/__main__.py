@@ -21,8 +21,12 @@ def main() -> None:
     parser = argparse.ArgumentParser(prog="blob", description="Blob trading agent")
     sub = parser.add_subparsers(dest="command", required=True)
     ro = sub.add_parser("run-once", help="one full cycle: data -> decision -> orders -> execution")
-    ro.add_argument("--rebalance", action="store_true",
-                    help="force a full strategy rebalance (debug/ops)")
+    ro_reb = ro.add_mutually_exclusive_group()
+    ro_reb.add_argument("--rebalance", action="store_true",
+                        help="force a full strategy rebalance (debug/ops)")
+    ro_reb.add_argument("--no-rebalance", action="store_true",
+                        help="skip strategy rebalance; risk check + daily trade only "
+                             "(use for the minimal live smoke test)")
     sub.add_parser("status", help="portfolio value, drawdown, holdings")
     sub.add_parser("loop", help="24/7 runner: hourly cycles, retries, desktop alerts")
     sub.add_parser("doctor", help="check config presence (never prints secret values)")
@@ -58,7 +62,8 @@ def main() -> None:
     cfg = Config.from_env()
 
     if args.command == "run-once":
-        print(json.dumps(run_once(cfg, full_rebalance=True if args.rebalance else None), indent=2))
+        rebalance = True if args.rebalance else (False if args.no_rebalance else None)
+        print(json.dumps(run_once(cfg, full_rebalance=rebalance), indent=2))
     elif args.command == "status":
         print(json.dumps(status(cfg), indent=2))
     elif args.command == "loop":
