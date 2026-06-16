@@ -45,6 +45,10 @@ La liste contient des tokens à transfer-tax, low-liquidity ou exotiques (SMILEK
 Le contrat d'inscription est public : nos trades sont copiables en live, et inversement on peut monitorer les agents rivaux pendant la semaine.
 - **Évaluation** : risque faible à notre taille (copier un wallet de $15 n'intéresse personne) ; l'opportunité inverse (meta-game) est du scope creep — ne pas construire avant que le core soit fiable.
 
+### R14. État local décalé après un trade live — résolu (16 juin, smoke-test)
+Découvert au premier cycle live autonome : `TwakCliExecutor` règle le swap on-chain mais ne touche pas `portfolio.holdings` (la vérité vient de `sync_live_holdings` en début de cycle). L'état sauvé et l'entrée du journal d'audit reflétaient donc l'avant-trade (décalage d'un cycle) — gênant le jour du rebalance où le journal montrerait l'ancienne allocation.
+- **Correctif** : en mode live, après tout trade, resync depuis la chaîne + re-mark de la valeur/drawdown avant sauvegarde. Validé : 2e cycle live, état local = solde on-chain exact (USDT 22.58, ETH 0.000726).
+
 ## 🟡 Modérés
 
 ### R10. x402 réel = USDC sur Base

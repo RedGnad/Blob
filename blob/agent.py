@@ -96,6 +96,7 @@ def run_once(cfg: Config, full_rebalance: bool | None = None) -> dict:
     orders = plan_orders(portfolio, prices, decision.weights, cfg)
     executor = make_executor(cfg)
     executed = sum(1 for o in orders if executor.execute(o, prices, portfolio))
+    traded = executed > 0
     if executed:
         portfolio.record_trade()
 
@@ -104,7 +105,15 @@ def run_once(cfg: Config, full_rebalance: bool | None = None) -> dict:
         micro = micro_qualification_order(cfg, portfolio, prices)
         if micro is not None and executor.execute(micro, prices, portfolio):
             portfolio.record_trade()
+            traded = True
             log.info("daily qualification micro-trade executed")
+
+    # The live executor settles on-chain without touching local holdings, so
+    # re-sync from the chain after trading and re-mark, otherwise the saved
+    # state and audit entry lag one cycle behind reality.
+    if cfg.mode == "live" and traded:
+        sync_live_holdings(portfolio)
+        value, drawdown = portfolio.mark(prices)
 
     portfolio.save()
 
