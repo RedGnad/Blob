@@ -46,9 +46,14 @@ class Config:
     top_k: int = 2
     rebalance_fraction: float = 0.20    # per-asset delta below this fraction of NAV is noise
     min_trade_usd: float = 1.0
-    dd_half: float = 0.10               # halve exposure
-    dd_kill: float = 0.18               # all to USDT (official DQ ~30%)
-    fg_risk_on: int = 45                # Fear & Greed threshold for risk-on regime
+    # "Moderate" calibration: rank-maximizing on the competition-window backtest
+    # (captures upside — p90 +8.9%, max +28.3% — keeping ~3pt buffer below the
+    # ~30% DQ cliff, 0% DQ over 358 windows). Not the defensive preset, which
+    # caps upside; not return-seeking, which flirts with the cliff (wDD 29.5%).
+    dd_half: float = 0.14               # halve exposure
+    dd_kill: float = 0.22               # all to USDT (official DQ ~30%, wide margin)
+    fg_risk_on: int = 35                # Fear & Greed threshold for risk-on regime
+    mixed_exposure: float = 0.65        # exposure when only one regime signal is bullish
 
     # Fast lane: in a strongly risk-on regime, concentrate on the single best
     # momentum asset instead of top_k (more upside in explosive weeks, the
@@ -85,6 +90,10 @@ class Config:
             mode=mode,
             executor_fallback=os.environ.get("EXECUTOR_FALLBACK", "0").strip() == "1",
             x402_enabled=os.environ.get("X402_ENABLED", "0").strip() == "1",
+            # Discretionary: arm only if the live week opens strongly risk-on
+            # (concentrates in the single best momentum asset; buys the fat
+            # right tail at lower DD because strong risk-on weeks are uptrends).
+            fast_lane=os.environ.get("FAST_LANE", "0").strip() == "1",
             twak_access_id=twak_id,
             twak_hmac_secret=twak_secret,
             agent_wallet_address=wallet,

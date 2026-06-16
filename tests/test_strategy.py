@@ -3,7 +3,8 @@ from blob.datafeed import Quote
 from blob.strategy import momentum_score, regime_exposure, select_candidates, target_allocation
 from blob.universe import BASE, REGIME_ANCHOR
 
-CFG = Config(cmc_api_key="test")
+# Pin regime params so these logic tests don't track production defaults.
+CFG = Config(cmc_api_key="test", fg_risk_on=45, mixed_exposure=0.5)
 
 
 def q(symbol, pct_24h=0.0, pct_7d=0.0, price=100.0):

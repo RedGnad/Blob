@@ -35,7 +35,7 @@ def regime_exposure(quotes: dict[str, Quote], fear_greed: int, cfg: Config) -> t
     if anchor_up and sentiment_ok:
         return 1.0, reasons + ["regime: risk-on"]
     if anchor_up or sentiment_ok:
-        return 0.5, reasons + ["regime: mixed"]
+        return cfg.mixed_exposure, reasons + [f"regime: mixed ({cfg.mixed_exposure:.2f})"]
     return 0.0, reasons + ["regime: risk-off"]
 
 

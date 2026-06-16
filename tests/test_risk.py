@@ -3,7 +3,8 @@ from blob.config import Config
 from blob.strategy import Decision
 from blob.universe import BASE
 
-CFG = Config(cmc_api_key="test")
+# Pin drawdown thresholds so these logic tests don't track production defaults.
+CFG = Config(cmc_api_key="test", dd_half=0.10, dd_kill=0.18)
 
 
 def test_exposure_ladder():
