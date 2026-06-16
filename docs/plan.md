@@ -41,7 +41,10 @@ Inscription on-chain : ✅ faite (11 juin). Deadline soumission DoraHacks (les 2
 
 ### 20-21 juin — soumission
 8. Freeze du code, README anglais, strategy explainer (notre angle : risk-first, guardrails, survie).
-9. **Démo vidéo** : boucle self-custody de bout en bout, tx hash à l'écran (5 pts rubrique, et obligatoire pour la soumission).
+9. **Démo vidéo** (OPTIONNELLE) : boucle self-custody de bout en bout, tx hash à l'écran.
+   Les règles exigent "repo public + (lien démo OU vidéo OU instructions de setup)" → on a
+   déjà repo + setup, la soumission est valide sans vidéo. La vidéo ne sert qu'au critère
+   "Demo and presentation" des prix spéciaux (5 pts/100) et à la lisibilité jury. Polish, pas porte.
 10. Soumission DoraHacks avant le 21 ; funding USDT final avant le 22 00:00 UTC.
 
 ### 22-28 juin — semaine live
