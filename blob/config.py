@@ -46,6 +46,11 @@ class Config:
     top_k: int = 2
     rebalance_fraction: float = 0.20    # per-asset delta below this fraction of NAV is noise
     min_trade_usd: float = 1.0
+    # Named guardrails (TWAK rubric: "per-trade and daily limits"). Generous on
+    # purpose — they bound runaway behaviour (a bug, a bad signal), they don't
+    # shape the strategy at our scale.
+    max_trade_fraction: float = 0.60    # no single swap moves more than this share of NAV
+    max_trades_per_day: int = 6         # hard cap on executed swaps per UTC day
     # "Moderate" calibration: rank-maximizing on the competition-window backtest
     # (captures upside — p90 +8.9%, max +28.3% — keeping ~3pt buffer below the
     # ~30% DQ cliff, 0% DQ over 358 windows). Not the defensive preset, which

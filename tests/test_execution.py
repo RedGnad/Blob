@@ -25,6 +25,14 @@ def test_plan_orders_sells_before_buys():
     assert orders[1].symbol == "ETH"
 
 
+def test_plan_orders_per_trade_cap():
+    # Target 100% ETH from all-USDT: raw delta = full NAV, capped at 60%.
+    pf = make_portfolio({BASE: 100.0})
+    orders = plan_orders(pf, {"ETH": 1.0}, {"ETH": 1.0, BASE: 0.0}, CFG)
+    assert len(orders) == 1
+    assert orders[0].usd_amount == CFG.max_trade_fraction * 100.0
+
+
 def test_plan_orders_hysteresis_ignores_small_deltas():
     pf = make_portfolio({BASE: 1.0, "ETH": 14.0})
     prices = {"ETH": 1.0}
@@ -68,6 +76,18 @@ def test_qualification_trade_sells_when_fully_deployed():
 def test_qualification_trade_none_on_dust_portfolio():
     pf = make_portfolio({BASE: 0.1})
     assert micro_qualification_order(CFG, pf, {}) is None
+
+
+def test_daily_swap_counter_resets_and_caps():
+    from datetime import datetime, timezone
+    pf = make_portfolio({BASE: 100.0})
+    d1 = datetime(2026, 6, 22, 0, 0, tzinfo=timezone.utc)
+    d2 = datetime(2026, 6, 23, 0, 0, tzinfo=timezone.utc)
+    assert pf.swaps_done_today(d1) == 0
+    pf.record_swap(d1); pf.record_swap(d1)
+    assert pf.swaps_done_today(d1) == 2
+    # new UTC day resets the counter
+    assert pf.swaps_done_today(d2) == 0
 
 
 def test_qualification_trade_requires_reserve_margin():

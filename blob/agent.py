@@ -95,7 +95,17 @@ def run_once(cfg: Config, full_rebalance: bool | None = None) -> dict:
 
     orders = plan_orders(portfolio, prices, decision.weights, cfg)
     executor = make_executor(cfg)
-    executed = sum(1 for o in orders if executor.execute(o, prices, portfolio))
+    # Daily-limit guardrail: stop executing rebalance swaps once the cap is hit
+    # (the mandatory qualification trade below stays exempt — missing it = DQ).
+    executed = 0
+    for o in orders:
+        if portfolio.swaps_done_today() >= cfg.max_trades_per_day:
+            log.warning("daily swap cap (%d) reached, skipping remaining rebalance orders",
+                        cfg.max_trades_per_day)
+            break
+        if executor.execute(o, prices, portfolio):
+            executed += 1
+            portfolio.record_swap()
     traded = executed > 0
     if executed:
         portfolio.record_trade()

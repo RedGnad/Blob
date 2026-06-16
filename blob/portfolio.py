@@ -17,6 +17,8 @@ class Portfolio:
     peak_value: float
     last_trade_date: str = ""           # UTC date of last executed trade (R3 daily rule)
     last_rebalance_date: str = ""       # UTC date of last full strategy rebalance
+    swaps_today_date: str = ""          # UTC date the swap counter belongs to
+    swaps_today: int = 0                # executed swaps so far this UTC day (daily-limit guardrail)
     last_prices: dict[str, float] = field(default_factory=dict)
     path: Path | None = field(default=None, repr=False)
 
@@ -29,6 +31,8 @@ class Portfolio:
                 peak_value=raw["peak_value"],
                 last_trade_date=raw.get("last_trade_date", ""),
                 last_rebalance_date=raw.get("last_rebalance_date", ""),
+                swaps_today_date=raw.get("swaps_today_date", ""),
+                swaps_today=raw.get("swaps_today", 0),
                 last_prices=raw.get("last_prices", {}),
                 path=path,
             )
@@ -42,6 +46,8 @@ class Portfolio:
             "peak_value": self.peak_value,
             "last_trade_date": self.last_trade_date,
             "last_rebalance_date": self.last_rebalance_date,
+            "swaps_today_date": self.swaps_today_date,
+            "swaps_today": self.swaps_today,
             "last_prices": self.last_prices,
         }, indent=2))
 
@@ -86,3 +92,14 @@ class Portfolio:
     def record_trade(self, now: datetime | None = None) -> None:
         now = now or datetime.now(timezone.utc)
         self.last_trade_date = now.date().isoformat()
+
+    def swaps_done_today(self, now: datetime | None = None) -> int:
+        now = now or datetime.now(timezone.utc)
+        return self.swaps_today if self.swaps_today_date == now.date().isoformat() else 0
+
+    def record_swap(self, now: datetime | None = None) -> None:
+        now = now or datetime.now(timezone.utc)
+        today = now.date().isoformat()
+        if self.swaps_today_date != today:
+            self.swaps_today_date, self.swaps_today = today, 0
+        self.swaps_today += 1

@@ -52,7 +52,9 @@ def plan_orders(
         if abs(delta) < threshold:
             continue
         side = "buy" if delta > 0 else "sell"
-        orders.append(Order(side=side, symbol=symbol, usd_amount=abs(delta)))
+        # Per-trade guardrail: no single swap exceeds max_trade_fraction of NAV.
+        usd = min(abs(delta), cfg.max_trade_fraction * total)
+        orders.append(Order(side=side, symbol=symbol, usd_amount=usd))
     # Free up BASE first.
     orders.sort(key=lambda o: o.side != "sell")
     return orders
