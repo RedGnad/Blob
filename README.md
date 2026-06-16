@@ -75,4 +75,4 @@ cp .env.example .env                          # fill: CMC key, TWAK credentials
 
 **Ops:** the production scheduler is a GitHub Actions hourly workflow (`.github/workflows/agent.yml`) — state persists on the [`agent-state`](https://github.com/RedGnad/Blob/tree/agent-state) branch, failed runs alert by email and self-heal next hour. A local LaunchAgent (`ops/`) is the warm backup; only one executor runs live at a time. Mode switch is one repo variable: `AGENT_MODE=paper|live`.
 
-**Status:** dress-rehearsal (paper, 24/7, cloud + local) until the trading window opens June 22; live trading June 22–28. French engineering docs: [risk red team](docs/redteam.md) · [build plan](docs/plan.md) · [strategy explainer](docs/strategy-explainer.md).
+**Status:** dress-rehearsal (paper, 24/7, cloud + local) until the trading window opens June 22; live trading June 22–28. Strategy write-up: [docs/strategy-explainer.md](docs/strategy-explainer.md).
