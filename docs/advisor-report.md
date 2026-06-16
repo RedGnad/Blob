@@ -102,3 +102,64 @@ Question stratégique à trancher : **rester focalisé "TWAK + survie" (profond 
 de risque sur le core)** ? Avec ~5 jours avant soumission et 1 seul builder, l'arbitrage effort/dispersion
 est réel. Recommandation interne : E + D (gratuits), puis A si double-track confirmé, puis C ; B en dernier
 (risque overfit le plus élevé avant le live).
+
+---
+
+## ADDENDUM (16 juin) — Renseignement Telegram + analyse concurrentielle
+
+### Signaux confirmés (qui parle : staff vs participant)
+- **Spot only** : re-confirmé plusieurs fois (participants, cohérent avec ruling staff antérieur). ✅ aligné.
+- **Classement en %** : participants l'affirment ("obviously it's %"), cohérent avec "ranked by total
+  return" de la page. Toujours pas de confirmation staff écrite noir sur blanc. ⚠️ à verrouiller.
+- **Double-track T1+T2** : "I think you can" (participant) + message staff antérieur (gwen) "same deadline
+  for both tracks, just for track 1 you have to make the agent trade". Signal **modérément fort que c'est
+  autorisé**, MAIS la page dit "Pick one". Tension non résolue → **demander confirmation explicite staff
+  avant d'investir dans Track 2.**
+- **BNB hors whitelist** : question posée, sans réponse claire ; notre design (BNB = gas only) est déjà bon.
+- **Real BNB requis pour la semaine live** : confirmé. ✅ on a la réserve.
+- **Pas de clés API dans le repo public** : ordre staff (Gwen). ✅ on est déjà conformes (secrets GH, .env
+  gitignore) — un pan du field va se faire avoir là-dessus.
+
+### Faiblesse du field = notre moat (important)
+- **TWAK swap renvoie 403 Forbidden** pour plusieurs participants sur le plan free ("works for read,
+  403 on swap"). **NOS swaps fonctionnent** (tx réelles prouvées) → une partie du field pourrait être
+  **incapable d'exécuter le moindre trade live**. Ça **augmente mécaniquement nos chances de placement
+  Track 1** (moins de concurrents fonctionnels). À surveiller : que notre accès reste actif.
+- **Agent Hub difficile à câbler** : beaucoup galèrent (MCP endpoint, x402, accès Pro). Notre x402 +
+  REST fonctionnels nous mettent devant la médiane — mais la profondeur Hub reste le critère du special.
+
+### Concurrents identifiés (menace réelle, pas le tout-venant)
+- **Brandon M. / BinacciAI** (github.com/BinacciAI/trading-agent) : "pipeline de 6 agents, 7+ Skills",
+  "institutional quant level", open-source, calcule fees/gas + maker/taker. Va **large** (Track 2 Skills
+  + Track 1). **Menace sérieuse sur les prix panel et Track 2.** On ne peut pas le battre en largeur.
+- **VPAY / Ananse** (Track 2, github.com/yooplvy/ananse-attestable-regime-skill) : Skill "regime
+  attestable" qui orchestre le Agent Hub (find_skill→execute_skill, btc_cross_asset_correlation) et
+  **commit chaque signal on-chain (keccak256)**, abstention si Hub bloqué. **Original et soigné** —
+  fort sur le special Agent Hub et Track 2.
+
+### Lecture concurrentielle
+Le **top du field va large et exploite le Agent Hub Skills à fond** (exactement nos 2 specials faibles).
+On **ne peut pas les battre en largeur** (1 builder, 5 jours). Notre edge défendable : **profondeur TWAK
+self-custody** (Brandon fait du quant multi-agent mais rien n'indique une intégration TWAK aussi profonde ;
+Ananse est Track 2 pur sans exécution). Le special TWAK reste notre meilleure prise à haute confiance.
+
+### Réponse directe aux 3 questions
+1. **Est-ce le plus optimal ?** Pour le special TWAK + survie Track 1 : oui, c'est notre edge défendable.
+   Pour "gagner le PLUS" (EV total tous prix) : **non** — on laisse Track 2 ($6k) et 2 specials sur la table.
+2. **Utilise-t-on tous les outils ?** **Non.** TWAK : à fond (bien). CMC Agent Hub : tranche mince
+   (pas de funding rates / social / Skills / MCP). BNB SDK : pas vraiment utilisé. C'est l'écart honnête.
+3. **Prêt à gagner le plus ?** Prêt à concourir fort pour **1 special + 1 placement Track 1**. Pour
+   maximiser le total : confirmer double-track → **construire un vrai Skill Track 2 utilisant le mécanisme
+   Agent Hub Skills** (ouvre $6k + renforce le special Agent Hub). Mais ne PAS courir après la largeur de
+   Brandon — garder la profondeur TWAK comme ancre.
+
+### Recommandation révisée (par EV/effort, 5 jours, 1 builder)
+1. **Verrouiller 3 réponses staff sur Telegram** (gratuit, débloque tout) : double-track ? classement %/$ ?
+   modèle de fees ? — ces réponses orientent 50% de la décision.
+2. **Vidéo + récit adoption** (E+D, ~quasi gratuit, points specials).
+3. **SI double-track confirmé : Skill Track 2** dérivé de notre moteur, mais branché sur le **mécanisme
+   Agent Hub Skills** (find_skill/execute_skill) pour faire d'une pierre deux coups (Track 2 + special
+   Agent Hub). ~1.5 j. C'est le plus gros gain d'EV incrémental.
+4. **Protéger le moat TWAK** : ne rien casser sur le core, finir la semaine live proprement.
+5. **NE PAS** sur-enrichir les signaux live avant le 22 (overfit > gain). Le faire éventuellement
+   dans le Skill Track 2 (backtest, pas d'argent réel en jeu).
