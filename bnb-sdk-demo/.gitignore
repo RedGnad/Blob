@@ -1,3 +1,5 @@
 .venv/
 .venv-bnb/
 .wallet/
+.wallet-buyer/
+.wallet-blob/

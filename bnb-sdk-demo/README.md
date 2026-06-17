@@ -1,38 +1,54 @@
-# BNB AI Agent SDK demo — Best Use of BNB AI Agent SDK
+# Trustless agent-to-agent alpha market — Best Use of BNB AI Agent SDK
 
-Standalone integration of the [BNB AI Agent SDK](https://github.com/bnb-chain/bnbagent-sdk)
-(`bnbagent`), submitted for the "Best Use of BNB AI Agent SDK" special prize.
+An inventive use of the [BNB AI Agent SDK](https://github.com/bnb-chain/bnbagent-sdk)'s
+flagship primitive, **ERC-8183 agentic commerce**, submitted for the "Best Use of
+BNB AI Agent SDK" special prize. Not the quickstart mint — a market that doesn't
+exist without the SDK.
 
-**Why it's a separate folder, not part of the trading agent:** the SDK signs with a
-raw private key, which is fundamentally incompatible with TWAK's no-export
-self-custody model used by the live Blob agent. That incompatibility is exactly
-what guarantees isolation — this demo runs on its own throwaway wallet on BSC
-testnet, gas-free via the MegaFuel paymaster, and touches nothing in the live
-agent (no shared wallet, key store, state, or code).
+## The idea
 
-## What it does
+**Blob sells its regime/momentum signal to another agent through an ERC-8183 job
+escrow, and the delivery is a recompute-it-yourself attestation.** Two trustless
+layers stack:
 
-Registers Blob's trading agent as a first-class on-chain identity through the SDK:
-generates an ERC-8004 agent URI (name, description, capabilities), mints the
-identity, attaches structured strategy metadata, and reads it back from the chain.
+1. **ERC-8183 escrow → trustless payment.** The buyer funds an escrow; funds
+   release only on delivery (silence past the dispute window approves; a dispute
+   triggers a whitelisted-voter quorum).
+2. **Recompute-able attestation → trustless quality.** The on-chain deliverable
+   is `keccak256` of a manifest whose metadata carries the signal's *raw inputs*.
+   The buyer recomputes the signal from those inputs and checks the seller
+   fabricated nothing.
 
-## Proven run (BSC testnet)
+→ **agent-to-agent alpha the buyer can trust without trusting the seller.** The
+escrow makes the payment trustless, the attestation makes the delivery trustless.
 
-```
-demo wallet (testnet, throwaway): 0xf8d7Ba5B512d73369E6a4F18e1A11a8CF5370f72
-registered ERC-8004 identity via BNB SDK: agentId=1417
-  tx: 0x1f0a67af7cf0735e409dd2a0b273a0397b1aaccef1627e107126c8e2056f8b17
-  gas price: 0 (gas-free via MegaFuel paymaster)
-```
+## Why it's isolated from the live agent
 
-[View on testnet BscScan](https://testnet.bscscan.com/tx/0x1f0a67af7cf0735e409dd2a0b273a0397b1aaccef1627e107126c8e2056f8b17)
+The SDK signs with a raw private key — fundamentally incompatible with TWAK's
+no-export self-custody used by the live Blob agent. That incompatibility *is* the
+isolation guarantee: this runs on its own throwaway testnet wallets, touching
+nothing in the live agent. (The same attestation idea secures the live agent's
+mainnet decisions — see the main README.)
+
+## Status
+
+- ✅ **Signal + recompute-verify layer** — works standalone on real data
+  (`python signal.py`): generates a regime/momentum signal, commits a digest,
+  recomputes and verifies. This is the trustless-quality half.
+- ⏳ **On-chain ERC-8183 flow** (`market.py`) — complete, runs end-to-end once the
+  buyer wallet is funded (see below). SDK escrow ops are MegaFuel-sponsored
+  (gas-free); only the faucet claim + the ERC-20 approve need a little tBNB.
 
 ## Run it
 
 ```bash
 python -m venv .venv && .venv/bin/pip install -r requirements.txt
-.venv/bin/python demo.py    # generates a throwaway testnet wallet on first run
+python signal.py        # standalone: signal + recompute-verify (no chain)
+
+# to run the on-chain market, fund the BUYER wallet first:
+#   1. tBNB (gas):  https://www.bnbchain.org/en/testnet-faucet
+#   2. then:        python claim_u.py   # pulls 10 test "U" from the faucet
+python market.py        # buy -> fund -> deliver -> settle + recompute-verify
 ```
 
-The live mainnet trading agent (this repo's root) carries its own TWAK-minted
-ERC-8004 identity and attests every decision on it — see the main README.
+Wallets are throwaway, generated on first run, gitignored.

@@ -1,1 +1,2 @@
 bnbagent==0.3.6
+web3>=6
