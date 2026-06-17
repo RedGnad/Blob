@@ -1,8 +1,16 @@
 # Blob 🫧
 
-**A risk-first autonomous trading agent that survives.** Built for [BNB Hack: AI Trading Agent Edition](https://dorahacks.io/hackathon/bnbhack-twt-cmc) (CoinMarketCap × Trust Wallet × BNB Chain) — Track 1, Autonomous Trading Agents.
+> **A self-custody trading agent that commits every decision on-chain and sells its signal through a trustless escrow — verify it all yourself in 30 seconds.**
 
-Most trading agents die in their first week: drawdown disqualification, overtrading into the cost floor, or an execution failure that misses the mandatory daily trade. Blob is engineered around the opposite premise — **in a 7-day live PnL competition, not blowing up is the highest-EV strategy** — and every design decision below is backtested against 358 competition-format windows.
+Built for [BNB Hack: AI Trading Agent Edition](https://dorahacks.io/hackathon/bnbhack-twt-cmc) (CoinMarketCap × Trust Wallet × BNB Chain). Trades live on BSC with self-custody signing (keys never leave Trust Wallet Agent Kit), reads CoinMarketCap through MCP + x402, and carries a first-class ERC-8004 identity. Most agents die in week one — drawdown DQ, overtrading, a missed mandatory trade. Blob is engineered around the opposite premise: **in a 7-day live PnL contest, not blowing up is the highest-EV strategy.**
+
+## ✅ Verify everything yourself in 30 seconds
+
+```bash
+python verify.py        # recompute our on-chain decision digest — no key, no trust
+```
+
+It reproduces, locally, the SHA-256 that Blob committed on-chain for a real trading decision, and prints the exact transactions to check. If the numbers match, the agent fabricated nothing. Same guarantee for the alpha it sells: `python bnb-sdk-demo/signal.py`.
 
 ## On-chain proof (everything below is real, BSC mainnet)
 
