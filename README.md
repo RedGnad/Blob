@@ -59,7 +59,10 @@ Run it yourself, no API key needed: `python -m blob backtest --days 365` (public
 ## Sponsor stack — used as the heart, not bolted on
 
 - **Trust Wallet Agent Kit**: sole execution layer. Local signing through the whole loop (keys created by and stored in TWAK, password in OS keychain / `TWAK_WALLET_PASSWORD` headless), swaps with slippage caps, **native x402** paying $0.01 per data request from the trading balance (BSC, Permit2), **ERC-8004 identity** minted and owned by the trading wallet itself.
-- **CoinMarketCap AI Agent Hub**: quotes + Fear & Greed drive the regime filter; the daily rebalance pays for its data via the CMC x402 endpoint and cross-checks it against the free feed (active-token filtering guards against ticker-squatting memecoins in v3 responses).
+- **CoinMarketCap AI Agent Hub**: the data backbone of every decision, used across **multiple Hub surfaces**:
+  - **Quotes** (`/v2/cryptocurrency/quotes/latest`) and the **Fear & Greed index** (`/v3/fear-and-greed/latest`) drive the regime filter and momentum ranking.
+  - **x402 pay-per-request** on **two distinct Hub endpoints** in the trade loop, paid in USDT on BSC via Permit2 — a quotes cross-check *and* a `listings/latest` market-breadth snapshot ($0.01 each, real on-chain payments, logged to the audit trail). Not a README mention: see the `x402` field in [`agent-state`](https://github.com/RedGnad/Blob/tree/agent-state).
+  - **Robustness for agent consumption**: v3 responses are a list per ticker, so we filter to active tokens by market cap (guards against memecoins squatting major symbols) and cross-check the x402 price against the keyed feed, flagging divergence.
 - **BNB Chain**: all execution, registration, identity and payments settle on BSC.
 
 ## Run it
