@@ -39,14 +39,18 @@ TOKENS: dict[str, str] = {
 
 ALLOWLIST = list(TOKENS)
 
-# Measured round-trip execution cost (%, USDT -> token -> USDT at $5 size,
-# `blob costs`, 2026-06-12). Drives the cost-aware entry floor in strategy.py.
+# Round-trip execution cost (%, USDT -> token -> USDT at $5 size). Measured via
+# `blob costs` 2026-06-12 at the old 0.7%/side fee, then re-derived for the
+# TWAK live-week fee waiver (0.7% -> 0.077%/side): the ~1.25pp provider-fee
+# round-trip drop is subtracted, floored at the new fee, leaving each token's
+# residual pool spread + slippage (which is what still separates majors from
+# illiquid names like PENDLE). RE-MEASURE once the waiver is live on BSC.
 RT_COST_PCT: dict[str, float] = {
-    "ETH": 1.27, "AAVE": 1.28, "XRP": 1.33, "DOGE": 1.37, "CAKE": 1.37,
-    "ATOM": 1.38, "LTC": 1.39, "AVAX": 1.40, "LINK": 1.57, "TWT": 1.58,
-    "DOT": 1.58, "ADA": 1.73, "FLOKI": 1.89, "FET": 1.89, "PENDLE": 3.36,
+    "ETH": 0.15, "AAVE": 0.15, "XRP": 0.15, "DOGE": 0.15, "CAKE": 0.15,
+    "ATOM": 0.15, "LTC": 0.15, "AVAX": 0.15, "LINK": 0.32, "TWT": 0.33,
+    "DOT": 0.33, "ADA": 0.48, "FLOKI": 0.64, "FET": 0.64, "PENDLE": 2.11,
 }
-DEFAULT_RT_COST_PCT = 1.5
+DEFAULT_RT_COST_PCT = 0.30
 
 
 def twak_token(symbol: str) -> str:

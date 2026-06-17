@@ -40,7 +40,7 @@ class Config:
 
     # Strategy / risk parameters (see docs/redteam.md for rationale)
     paper_start_usdt: float = 15.0
-    cost_per_side: float = 0.007        # ~1.4% round-trip measured on BSC via TWAK
+    cost_per_side: float = 0.00077      # TWAK live-week fee 0.077%/side (down ~10x from 0.7%)
     min_momentum_pct: float = 2.0       # entry: expected edge must clear the cost floor
     cost_floor_mult: float = 2.0        # entry floor = max(min_momentum, mult * measured RT cost)
     exit_momentum_pct: float = 0.0      # exit floor for already-held assets (anti-churn)

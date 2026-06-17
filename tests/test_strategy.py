@@ -58,9 +58,11 @@ def test_target_allocation_sums_to_one():
 
 
 def test_cost_aware_entry_floor_blocks_expensive_tokens():
-    # PENDLE round-trip costs 3.36% -> entry floor 6.72%; ETH (1.27%) -> 2.54%.
-    quotes = {"PENDLE": q("PENDLE", pct_24h=5.0, pct_7d=5.0),
-              "ETH": q("ETH", pct_24h=5.0, pct_7d=5.0)}
+    # Post fee-waiver: PENDLE round-trip 2.11% -> entry floor 4.22%; ETH 0.15%
+    # -> floor falls back to min_momentum_pct (2.0). Momentum 3% clears ETH's
+    # floor but not PENDLE's.
+    quotes = {"PENDLE": q("PENDLE", pct_24h=3.0, pct_7d=3.0),
+              "ETH": q("ETH", pct_24h=3.0, pct_7d=3.0)}
     picks = select_candidates(quotes, CFG)
     assert [p.symbol for p in picks] == ["ETH"]
 
