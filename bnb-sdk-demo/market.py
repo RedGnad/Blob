@@ -26,7 +26,9 @@ from __future__ import annotations
 
 import base64
 import json
+import sys
 import time
+from pathlib import Path
 
 from bnbagent.erc8183 import DeliverableManifest, ERC8183Client, JobStatus
 from bnbagent.wallets import EVMWalletProvider
@@ -34,14 +36,22 @@ from bnbagent.wallets import EVMWalletProvider
 import signal as alpha  # local signal.py
 
 CHAIN_ID = 97
+DISPUTE_WINDOW_S = 86400  # OptimisticPolicy window on bsc-testnet (1 day)
 TESTNET_TX = "https://testnet.bscscan.com/tx/"
+STATE = Path(__file__).resolve().parent / ".last_job.json"
 
 
-def main() -> None:
+def _clients():
     buyer = EVMWalletProvider(password="demo-buyer", persist=True, wallets_dir=".wallet-buyer")
     blob = EVMWalletProvider(password="demo-blob", persist=True, wallets_dir=".wallet-blob")
-    buyer_c = ERC8183Client(buyer, network="bsc-testnet")
-    blob_c = ERC8183Client(blob, network="bsc-testnet")
+    return (buyer, ERC8183Client(buyer, network="bsc-testnet"),
+            blob, ERC8183Client(blob, network="bsc-testnet"))
+
+
+def open_deliver() -> None:
+    """create -> fund -> submit + recompute-verify. Runs now; settle later
+    (OptimisticPolicy: silence past the 1-day dispute window approves)."""
+    buyer, buyer_c, blob, blob_c = _clients()
     print(f"buyer={buyer.address}  blob/provider={blob.address}")
 
     # 1. Blob computes the alpha it sells, and its attestation digest.
@@ -50,7 +60,7 @@ def main() -> None:
     print(f"signal: {payload['signal']}  attestation={sig_digest}")
 
     budget = 1 * (10 ** buyer_c.token_decimals())
-    expired_at = int(time.time()) + 65 * 60
+    expired_at = int(time.time()) + 2 * DISPUTE_WINDOW_S + 3600  # submit deadline in the future
 
     # 2. Buyer opens the escrow naming Blob as provider, then funds it.
     res = buyer_c.create_job(
@@ -71,8 +81,12 @@ def main() -> None:
         job_id=job_id,
         chain_id=CHAIN_ID,
         contracts={"commerce": blob_c.network.commerce_contract},
-        response={"regime": payload["signal"]["regime"], "pick": payload["signal"]["pick"]},
-        metadata={"payload": payload, "attestation": sig_digest},
+        # The recompute-able payload (signal + raw inputs) IS the delivery content.
+        response={
+            "content": json.dumps(payload, sort_keys=True, separators=(",", ":")),
+            "content_type": "application/json",
+        },
+        metadata={"attestation": sig_digest},
     )
     deliverable = manifest.manifest_hash()
     manifest_json = json.dumps(manifest.to_dict(), sort_keys=True, separators=(",", ":"))
@@ -80,23 +94,29 @@ def main() -> None:
     sub = blob_c.submit(job_id, deliverable, {"deliverable_url": data_url})
     print(f"submit  deliverable=0x{deliverable.hex()}  {TESTNET_TX}{sub.get('transactionHash')}")
 
-    # 4. Settle (permissionless). OptimisticPolicy: silence past the dispute
-    #    window approves. On first run, confirm the window length on testnet and
-    #    wait it out if settle does not move the job to COMPLETED immediately.
-    settle = buyer_c.settle(job_id)
-    status = buyer_c.get_job_status(job_id)
-    print(f"settle  {TESTNET_TX}{settle.get('transactionHash')}  status={status}")
-
-    # 5. Recompute-it-yourself: integrity (manifest hash) + quality (signal).
+    # 4. Recompute-it-yourself: integrity (manifest hash) + quality (signal).
     fetched = json.loads(manifest_json)
     integrity = DeliverableManifest.from_dict(fetched).manifest_hash() == deliverable
-    quality = alpha.recompute_and_verify(
-        fetched["metadata"]["payload"], fetched["metadata"]["attestation"]
-    )
+    delivered_payload = json.loads(fetched["response"]["content"])
+    quality = alpha.recompute_and_verify(delivered_payload, fetched["metadata"]["attestation"])
     print(f"verify  manifest_integrity={integrity}  signal_recompute={quality}")
-    if status == JobStatus.COMPLETED and integrity and quality:
+
+    STATE.write_text(json.dumps({"job_id": job_id, "submitted_at": int(time.time())}))
+    settle_at = int(time.time()) + DISPUTE_WINDOW_S
+    print(f"\njob {job_id} SUBMITTED. Settle after the dispute window "
+          f"(~{time.strftime('%Y-%m-%d %H:%M UTC', time.gmtime(settle_at))}): python market.py --settle")
+
+
+def settle() -> None:
+    """Permissionless settle after the dispute window -> COMPLETED."""
+    _, buyer_c, _, _ = _clients()
+    job_id = json.loads(STATE.read_text())["job_id"]
+    res = buyer_c.settle(job_id)
+    status = buyer_c.get_job_status(job_id)
+    print(f"settle job {job_id}  {TESTNET_TX}{res.get('transactionHash')}  status={status}")
+    if status == JobStatus.COMPLETED:
         print("TRUSTLESS ALPHA DELIVERED: paid on delivery, quality recompute-verified.")
 
 
 if __name__ == "__main__":
-    main()
+    settle() if "--settle" in sys.argv else open_deliver()

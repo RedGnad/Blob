@@ -30,14 +30,23 @@ isolation guarantee: this runs on its own throwaway testnet wallets, touching
 nothing in the live agent. (The same attestation idea secures the live agent's
 mainnet decisions — see the main README.)
 
-## Status
+## Proven run (BSC testnet, job #212)
 
-- ✅ **Signal + recompute-verify layer** — works standalone on real data
-  (`python signal.py`): generates a regime/momentum signal, commits a digest,
-  recomputes and verifies. This is the trustless-quality half.
-- ⏳ **On-chain ERC-8183 flow** (`market.py`) — complete, runs end-to-end once the
-  buyer wallet is funded (see below). SDK escrow ops are MegaFuel-sponsored
-  (gas-free); only the faucet claim + the ERC-20 approve need a little tBNB.
+Full buy → fund → deliver lifecycle, on-chain, with the recompute-verification passing:
+
+| Step | tx |
+|---|---|
+| create_job (#212) | [`d267d1ff…`](https://testnet.bscscan.com/tx/d267d1ff65f52b9bb0d7fb52f211fe7b946214294f2c4bd73b49316299287b15) |
+| register_job (bind OptimisticPolicy) | [`a8a7d8dc…`](https://testnet.bscscan.com/tx/a8a7d8dc20277dfb2f7bd1fd79ef02f160baf1e936fdab88e92e94ee17a95297) |
+| fund (escrow, 1 U) | [`36d8fe61…`](https://testnet.bscscan.com/tx/36d8fe61faa94dfcc815d83f445c2e07f7f43deba276dee0c87d4fdd0383a1d5) |
+| submit (deliverable `0xe7519b5f…`) | [`8df4e1a2…`](https://testnet.bscscan.com/tx/8df4e1a2ad5893b920e68cc1767db2c4c7e8f304fd352bec4510d923ae6a125d) |
+
+```
+verify  manifest_integrity=True  signal_recompute=True
+```
+
+`settle` is permissionless and completes the job to COMPLETED after the
+OptimisticPolicy dispute window (1 day on testnet): `python market.py --settle`.
 
 ## Run it
 

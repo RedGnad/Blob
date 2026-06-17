@@ -22,9 +22,22 @@ ERC20_BAL = [{"inputs": [{"name": "a", "type": "address"}], "name": "balanceOf",
               "outputs": [{"type": "uint256"}], "stateMutability": "view", "type": "function"}]
 
 
+def _poa_web3() -> Web3:
+    """BSC is proof-of-authority: inject the POA middleware (name differs across
+    web3 v6/v7) so extraData validation passes."""
+    w3 = Web3(Web3.HTTPProvider(RPC))
+    try:
+        from web3.middleware import ExtraDataToPOAMiddleware
+        w3.middleware_onion.inject(ExtraDataToPOAMiddleware, layer=0)
+    except ImportError:
+        from web3.middleware import geth_poa_middleware
+        w3.middleware_onion.inject(geth_poa_middleware, layer=0)
+    return w3
+
+
 def main() -> None:
     buyer = EVMWalletProvider(password="demo-buyer", persist=True, wallets_dir=".wallet-buyer")
-    w3 = Web3(Web3.HTTPProvider(RPC))
+    w3 = _poa_web3()
     acct = w3.eth.account.from_key(buyer.export_private_key())
     print(f"buyer={acct.address}  tBNB={w3.from_wei(w3.eth.get_balance(acct.address), 'ether')}")
 
