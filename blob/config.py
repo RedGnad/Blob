@@ -54,11 +54,13 @@ class Config:
     max_trade_fraction: float = 0.60    # no single swap moves more than this share of NAV
     max_trades_per_day: int = 6         # hard cap on executed swaps per UTC day
     # "Moderate" calibration: rank-maximizing on the competition-window backtest
-    # (captures upside — p90 +8.9%, max +28.3% — keeping ~3pt buffer below the
-    # ~30% DQ cliff, 0% DQ over 358 windows). Not the defensive preset, which
-    # caps upside; not return-seeking, which flirts with the cliff (wDD 29.5%).
-    dd_half: float = 0.14               # halve exposure
-    dd_kill: float = 0.22               # all to USDT (official DQ ~30%, wide margin)
+    # (captures upside — p90 +11%, max +30% with the fee waiver — at 0% DQ).
+    # Kill-switch hardened (dd_kill 0.22 -> 0.16) because the official DQ cap is
+    # only "for example 30%" and staff are silent: this caps worst observed
+    # window drawdown at ~20% (robust even if the real cap is 22-25%), at a
+    # negligible return cost (-0.2pt median, same p90/max). DQ=$0 dominates.
+    dd_half: float = 0.10               # halve exposure
+    dd_kill: float = 0.16               # all to USDT — self-cap well under any plausible DQ gate
     fg_risk_on: int = 35                # Fear & Greed threshold for risk-on regime
     mixed_exposure: float = 0.65        # exposure when only one regime signal is bullish
 
