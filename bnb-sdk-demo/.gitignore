@@ -3,3 +3,4 @@
 .wallet/
 .wallet-buyer/
 .wallet-blob/
+.last_job.json
