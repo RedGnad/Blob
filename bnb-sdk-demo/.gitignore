@@ -4,3 +4,6 @@
 .wallet-buyer/
 .wallet-blob/
 .last_job.json
+auto_settle.log
+.settled
+auto_settle.sh
