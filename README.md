@@ -4,6 +4,8 @@
 
 Built for [BNB Hack: AI Trading Agent Edition](https://dorahacks.io/hackathon/bnbhack-twt-cmc) (CoinMarketCap × Trust Wallet × BNB Chain). Trades live on BSC with self-custody signing (keys never leave Trust Wallet Agent Kit), reads CoinMarketCap through MCP + x402, and carries a first-class ERC-8004 identity. Most agents die in week one — drawdown DQ, overtrading, a missed mandatory trade. Blob is engineered around the opposite premise: **in a 7-day live PnL contest, not blowing up is the highest-EV strategy.**
 
+**Who it's for:** a self-custody holder who wants disciplined, automated market exposure **without handing their keys to a bot or an exchange.** You set the rules — drawdown caps, token allowlist, trade size limits — the agent executes them unattended and proves every move on-chain. It's not a fund or a signal group you trust; it's code you run, configure, and verify yourself.
+
 ## ✅ Verify everything yourself in 30 seconds
 
 ```bash
@@ -73,19 +75,33 @@ Run it yourself, no API key needed: `python -m blob backtest --days 365` (public
   - **Robustness for agent consumption**: v3 responses are a list per ticker, so we filter to active tokens by market cap (guards against memecoins squatting major symbols) and cross-check the x402 price against the keyed feed, flagging divergence.
 - **BNB Chain**: all execution, registration, identity and payments settle on BSC.
 
-## Run it
+## Run your own Blob
 
+Blob is the product: clone it, point it at your own self-custody wallet, set your risk appetite, and deploy it for free. Three steps.
+
+**1. Install & connect your wallet**
 ```bash
 python3 -m venv .venv && .venv/bin/pip install -e ".[dev]"
-cp .env.example .env                          # fill: CMC key, TWAK credentials
-.venv/bin/python -m blob doctor               # config check (never prints secrets)
-.venv/bin/python -m blob run-once             # one full cycle (paper by default)
-.venv/bin/python -m blob backtest --days 90   # keyless backtest
-.venv/bin/python -m blob costs --usd 5        # measure real execution costs
-.venv/bin/python -m blob loop                 # 24/7 local runner
-.venv/bin/pytest                              # 33 tests
+cp .env.example .env          # your CMC key + your TWAK credentials (keys stay in TWAK)
+.venv/bin/python -m blob doctor       # config check (never prints secrets)
 ```
 
-**Ops:** the production scheduler is a GitHub Actions hourly workflow (`.github/workflows/agent.yml`) — state persists on the [`agent-state`](https://github.com/RedGnad/Blob/tree/agent-state) branch, failed runs alert by email and self-heal next hour. A local LaunchAgent (`ops/`) is the warm backup; only one executor runs live at a time. Mode switch is one repo variable: `AGENT_MODE=paper|live`.
+**2. Set your own risk limits** — edit `blob/config.py` (all guardrails are yours to dial):
+
+| Knob | What it controls |
+|---|---|
+| `dd_half` / `dd_kill` | drawdown ladder — halve / flatten to cash |
+| `max_trade_fraction` / `max_trades_per_day` | per-trade size & daily trade caps |
+| `mixed_exposure`, `top_k`, `min_momentum_pct` | how aggressive / concentrated |
+| `ALLOWLIST` (`blob/universe.py`) | which tokens it may ever touch |
+
+```bash
+.venv/bin/python -m blob backtest --days 365   # see your settings on 358 windows, keyless
+.venv/bin/python -m blob run-once              # one cycle (paper by default)
+```
+
+**3. Deploy it (free)** — push to a private repo and the included GitHub Actions workflow (`.github/workflows/agent.yml`) runs it 24/7 with self-healing and email alerts; state persists on the `agent-state` branch. A local runner (`blob loop` / `ops/`) is the warm backup. Flip live with one variable: `AGENT_MODE=live`. No server to rent, no keys to surrender.
+
+**Status:** dress-rehearsal (paper, 24/7, cloud + local) until the trading window opens June 22; live trading June 22–28. Strategy write-up: [docs/strategy.md](docs/strategy.md).
 
 **Status:** dress-rehearsal (paper, 24/7, cloud + local) until the trading window opens June 22; live trading June 22–28. Strategy write-up: [docs/strategy-explainer.md](docs/strategy-explainer.md).
