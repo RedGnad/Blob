@@ -25,8 +25,10 @@ USDT_BSC = "0x55d398326f99059fF775485246999027B3197955"
 MAX_PAYMENT_ATOMIC = "10000000000000000"  # 0.01 USDT
 
 
-def build_request_cmd(symbols: list[str]) -> list[str]:
-    url = f"{X402_QUOTES_URL}?symbol={','.join(symbols)}"
+X402_LISTINGS_URL = "https://pro-api.coinmarketcap.com/x402/v3/cryptocurrency/listings/latest"
+
+
+def build_request_cmd(url: str) -> list[str]:
     return [
         "twak", "x402", "request", url,
         "--prefer-network", "bsc",
@@ -39,11 +41,11 @@ def build_request_cmd(symbols: list[str]) -> list[str]:
     ]
 
 
-def fetch_quotes_x402(symbols: list[str], timeout: float = 90.0) -> dict | None:
-    """Pay-per-request CMC quotes via TWAK x402. Returns the raw parsed
-    response (shape verified during the dress rehearsal) or None on failure —
-    the caller must never depend on this for the trading decision itself."""
-    cmd = build_request_cmd(symbols)
+def _x402_get(url: str, timeout: float = 90.0) -> dict | None:
+    """Pay $0.01 USDT (BSC) for one x402-gated CMC request. Returns the parsed
+    response or None on failure — callers must never depend on it for the
+    trading decision itself."""
+    cmd = build_request_cmd(url)
     try:
         result = subprocess.run(cmd, capture_output=True, text=True, timeout=timeout)
     except (subprocess.SubprocessError, OSError) as exc:
@@ -59,6 +61,35 @@ def fetch_quotes_x402(symbols: list[str], timeout: float = 90.0) -> dict | None:
     except json.JSONDecodeError:
         log.warning("x402 response is not JSON: %s", result.stdout.strip()[:200])
         return None
+
+
+def fetch_quotes_x402(symbols: list[str], timeout: float = 90.0) -> dict | None:
+    """Pay-per-request CMC quotes via TWAK x402 (request type 1: quotes)."""
+    return _x402_get(f"{X402_QUOTES_URL}?symbol={','.join(symbols)}", timeout)
+
+
+def fetch_listings_x402(limit: int = 20, timeout: float = 90.0) -> dict | None:
+    """Pay-per-request CMC listings via TWAK x402 (request type 2: listings).
+    A distinct paid endpoint used as a market-breadth cross-check in the loop."""
+    return _x402_get(f"{X402_LISTINGS_URL}?limit={limit}", timeout)
+
+
+def listings_breadth(payload: dict) -> dict | None:
+    """Compact market-breadth snapshot from a listings response: share of the
+    top names up over 24h. Small on purpose — it goes to the audit log."""
+    rows = payload.get("data") or []
+    changes = []
+    for r in rows:
+        quote = r.get("quote")
+        # v3 returns quote as a list of per-currency objects; older shape a dict.
+        usd = next((q for q in quote if q.get("symbol") == "USD"), None) \
+            if isinstance(quote, list) else (quote or {}).get("USD")
+        if usd and usd.get("percent_change_24h") is not None:
+            changes.append(usd["percent_change_24h"])
+    if not changes:
+        return None
+    up = sum(1 for c in changes if c > 0)
+    return {"n": len(changes), "share_up_24h": round(up / len(changes), 3)}
 
 
 def parse_quotes(payload: dict, symbol: str) -> dict | None:

@@ -23,7 +23,7 @@ from .execution import (
 from .portfolio import Portfolio
 from .strategy import Decision, target_allocation
 from .attest import attest_onchain, attest_payload, decision_digest
-from .x402 import fetch_quotes_x402
+from .x402 import fetch_listings_x402, fetch_quotes_x402, listings_breadth
 from .x402 import parse_quotes as parse_x402_quotes
 from .universe import ALLOWLIST, BASE, REGIME_ANCHOR
 
@@ -69,17 +69,22 @@ def run_once(cfg: Config, full_rebalance: bool | None = None) -> dict:
 
     x402_proof = None
     if full_rebalance and cfg.x402_enabled:
-        # Pay-per-request data in the trade loop (TWAK x402, $0.01/day). Used
-        # as paid cross-check + audit proof, never as the sole decision input.
-        raw = fetch_quotes_x402([REGIME_ANCHOR])
-        x402_proof = parse_x402_quotes(raw, REGIME_ANCHOR) if raw else None
+        # Two distinct pay-per-request endpoints in the trade loop (TWAK x402,
+        # ~$0.02/day): a quote cross-check and a market-breadth snapshot. Paid
+        # audit proof, never the sole decision input.
+        x402_proof = {}
+        raw_q = fetch_quotes_x402([REGIME_ANCHOR])
+        anchor_quote = parse_x402_quotes(raw_q, REGIME_ANCHOR) if raw_q else None
         anchor = quotes.get(REGIME_ANCHOR)
-        if x402_proof and anchor:
-            divergence = abs(x402_proof["price"] / anchor.price - 1.0)
-            x402_proof["divergence_vs_feed"] = round(divergence, 4)
+        if anchor_quote and anchor:
+            divergence = abs(anchor_quote["price"] / anchor.price - 1.0)
+            anchor_quote["divergence_vs_feed"] = round(divergence, 4)
             if divergence > 0.02:
                 log.warning("x402/feed price divergence %.1f%% on %s",
                             divergence * 100, REGIME_ANCHOR)
+        x402_proof["quotes"] = anchor_quote
+        raw_l = fetch_listings_x402(limit=20)
+        x402_proof["breadth"] = listings_breadth(raw_l) if raw_l else None
 
     if full_rebalance:
         portfolio.last_rebalance_date = now.date().isoformat()

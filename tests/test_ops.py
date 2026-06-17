@@ -1,19 +1,31 @@
 from datetime import datetime, timezone
 
 from blob.scheduler import seconds_until_next_hour
-from blob.x402 import MAX_PAYMENT_ATOMIC, USDT_BSC, build_request_cmd
+from blob.x402 import MAX_PAYMENT_ATOMIC, USDT_BSC, build_request_cmd, listings_breadth
 
 
 def test_x402_cmd_pays_capped_usdt_on_bsc():
-    cmd = build_request_cmd(["BTC", "ETH"])
+    cmd = build_request_cmd("https://example/x402/quotes?symbol=BTC")
     assert cmd[:3] == ["twak", "x402", "request"]
-    assert "symbol=BTC,ETH" in cmd[3]
     assert "--prefer-network" in cmd and cmd[cmd.index("--prefer-network") + 1] == "bsc"
     assert "--prefer-asset" in cmd and cmd[cmd.index("--prefer-asset") + 1] == USDT_BSC
     assert "--max-payment" in cmd and cmd[cmd.index("--max-payment") + 1] == MAX_PAYMENT_ATOMIC
     assert "--yes" in cmd
     # The wallet password must never appear on the command line.
     assert "--password" not in cmd
+
+
+def test_listings_breadth():
+    # v3 shape: quote is a list of per-currency objects.
+    payload = {"data": [
+        {"quote": [{"symbol": "USD", "percent_change_24h": 2.0}]},
+        {"quote": [{"symbol": "USD", "percent_change_24h": -1.0}]},
+        {"quote": [{"symbol": "USD", "percent_change_24h": 3.0}]},
+        {"quote": [{"symbol": "USD"}]},  # missing -> ignored
+    ]}
+    b = listings_breadth(payload)
+    assert b == {"n": 3, "share_up_24h": round(2 / 3, 3)}
+    assert listings_breadth({"data": []}) is None
 
 
 def test_x402_parse_filters_dead_ticker_squatters():
