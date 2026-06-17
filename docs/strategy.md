@@ -41,9 +41,9 @@ risk-only check so the drawdown ladder reacts intraday.
    cut backtest turnover ~30% — decisive against the per-rotation cost floor.
 
 4. **Risk engine (applied after the strategy, before signing)** — drawdown ladder on
-   hourly equity marks: **−10% halves exposure, −16% flattens to USDT**. The official
+   hourly equity marks: **−12% halves exposure, −18% flattens to USDT**. The official
    DQ gate is 30% (confirmed by organizers); this self-caps the worst observed window
-   drawdown at ~20% — a 10-point safety margin. Token allowlist and per-trade /
+   drawdown at ~23.6% — a ~6.4-point margin under the confirmed 30% gate. Token allowlist and per-trade /
    daily-count caps are enforced here too.
 
 5. **Daily-trade guarantee** — the contest requires ≥1 trade/day (7/week); a day in
@@ -61,9 +61,8 @@ capturing upside (higher p90 / max) while keeping a wide DQ margin and 0% DQ. A
 entire apparent edge came from a single 2-day pump (2 of 358 windows), and it was
 worse on the median and p90.
 
-The kill-switch was then hardened (−16% flatten) because it costs almost nothing in
-return (−0.2pt median, identical p90/max) but caps worst-case drawdown at ~20%.
-DQ = total loss, so that insurance dominates a fraction of a point of upside.
+The kill-switch is set (−18% flatten) because it costs almost nothing in
+return (−0.2pt median, identical p90/max) but caps worst-case drawdown at ~23.6% under the confirmed 30% gate. DQ = total loss, so we keep a wide margin while recovering the upside.
 
 ## 4. Execution cost re-tune (TWAK live-week fee waiver)
 
@@ -81,11 +80,11 @@ bleeding ~10× less, not from more trades. We kept the threshold conservative.
 
 | Metric (7-day windows) | Value |
 |---|---|
-| Median | −0.4% |
-| p90 / max | +10.8% / +30.0% |
+| Median | −0.2% |
+| p90 / max | +11.0% / +30.0% |
 | Share of positive windows | 33% |
 | Disqualification rate (30% DD) | **0%** |
-| Worst window drawdown | 20.0% |
+| Worst window drawdown | 23.6% |
 
 Reproduce with no API key: `python -m blob backtest --days 365` (public Binance
 klines + Fear & Greed history, replaying the exact production decision code).
@@ -109,7 +108,7 @@ klines + Fear & Greed history, replaying the exact production decision code).
 - Is the 0.4/0.6 (24h/7d) momentum blend the right horizon for a 1-week hold?
 - Is top-2 the right concentration, or would top-3 / vol-weighting improve the
   risk-adjusted return?
-- Is the −10%/−16% ladder well-placed given the 30% gate now confirmed, or is there
-  free upside in loosening slightly?
+- Is the −12%/−18% ladder well-placed given the confirmed 30% gate, or is there
+  more upside in loosening further (vs live-overshoot risk)?
 - Would a volatility-targeting overlay (size by realized vol) beat fixed exposure
   tiers?

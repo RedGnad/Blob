@@ -55,12 +55,13 @@ class Config:
     max_trades_per_day: int = 6         # hard cap on executed swaps per UTC day
     # "Moderate" calibration: rank-maximizing on the competition-window backtest
     # (captures upside — p90 +11%, max +30% with the fee waiver — at 0% DQ).
-    # Kill-switch hardened (dd_kill 0.22 -> 0.16) because the official DQ cap is
-    # only "for example 30%" and staff are silent: this caps worst observed
-    # window drawdown at ~20% (robust even if the real cap is 22-25%), at a
-    # negligible return cost (-0.2pt median, same p90/max). DQ=$0 dominates.
-    dd_half: float = 0.10               # halve exposure
-    dd_kill: float = 0.16               # all to USDT — self-cap well under any plausible DQ gate
+    # Kill-switch set so the worst observed window drawdown is ~23.6%: the DQ
+    # cap is now CONFIRMED at 30% by the organizers, leaving a ~6.4pt margin
+    # (frequent 30-min risk checks bound live overshoot). This recovers the
+    # median (-0.4% -> -0.2%) the earlier cap-uncertainty hardening had cost,
+    # at no meaningful DQ risk (0% DQ in backtest both ways).
+    dd_half: float = 0.12               # halve exposure
+    dd_kill: float = 0.18               # all to USDT — ~6.4pt margin under the confirmed 30% gate
     fg_risk_on: int = 35                # Fear & Greed threshold for risk-on regime
     mixed_exposure: float = 0.65        # exposure when only one regime signal is bullish
 
