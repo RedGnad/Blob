@@ -29,6 +29,7 @@ def main() -> None:
                              "(use for the minimal live smoke test)")
     sub.add_parser("status", help="portfolio value, drawdown, holdings")
     sub.add_parser("loop", help="24/7 runner: hourly cycles, retries, desktop alerts")
+    sub.add_parser("market-scan", help="deep CMC Agent Hub (MCP) market analysis, attested on-chain")
     sub.add_parser("doctor", help="check config presence (never prints secret values)")
     bt = sub.add_parser("backtest", help="replay the decision core on history (keyless)")
     bt.add_argument("--days", type=int, default=90)
@@ -69,6 +70,9 @@ def main() -> None:
     elif args.command == "loop":
         from .scheduler import loop
         loop(cfg)
+    elif args.command == "market-scan":
+        from .marketscan import run_and_attest
+        print(json.dumps(run_and_attest(cfg), indent=2))
 
 
 if __name__ == "__main__":

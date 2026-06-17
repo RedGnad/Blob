@@ -25,6 +25,7 @@ It reproduces, locally, the SHA-256 that Blob committed on-chain for a real trad
 | x402 pay-per-request data (Permit2 approval; $0.01 USDT per request, paid on BSC) | [`0x2b6888…397bfd`](https://bscscan.com/tx/0x2b688866ea909e29aa3d03792146210df5157c314060579727fc866f7d397bfd) |
 | ERC-8004 agent identity, `agentId 132858`, owned by the trading wallet | [`0x14a6f4…a25103`](https://bscscan.com/tx/0x14a6f4c62986e60aaed77b3cfc7dafd41ef0b9814d6365c33531f8a4c7a25103) |
 | On-chain decision attestation (digest committed as ERC-8004 metadata) | [`0xc9460f…c23b07`](https://bscscan.com/tx/0xc9460f77e6e61ba08fd7ddd8d9a67d46a973ae39abe76a5949349f480ac23b07) |
+| On-chain market-analysis attestation (deep CMC MCP scan) | [`0x072176…1a3a3`](https://bscscan.com/tx/0x072176f68dd54c2747327f7d440d83d5091e0d5520663fbb17434111e021a3a3) |
 | Hourly audit trail (every decision, order and x402 payment) | [`agent-state` branch](https://github.com/RedGnad/Blob/tree/agent-state) |
 
 ## How it works
@@ -69,10 +70,11 @@ Run it yourself, no API key needed: `python -m blob backtest --days 365` (public
 ## Sponsor stack — used as the heart, not bolted on
 
 - **Trust Wallet Agent Kit**: sole execution layer. Local signing through the whole loop (keys created by and stored in TWAK, password in OS keychain / `TWAK_WALLET_PASSWORD` headless), swaps with slippage caps, **native x402** paying $0.01 per data request from the trading balance (BSC, Permit2), **ERC-8004 identity** minted and owned by the trading wallet itself.
-- **CoinMarketCap AI Agent Hub**: the data backbone of every decision, used across **multiple Hub surfaces**:
-  - **Quotes** (`/v2/cryptocurrency/quotes/latest`) and the **Fear & Greed index** (`/v3/fear-and-greed/latest`) drive the regime filter and momentum ranking.
-  - **x402 pay-per-request** on **two distinct Hub endpoints** in the trade loop, paid in USDT on BSC via Permit2 — a quotes cross-check *and* a `listings/latest` market-breadth snapshot ($0.01 each, real on-chain payments, logged to the audit trail). Not a README mention: see the `x402` field in [`agent-state`](https://github.com/RedGnad/Blob/tree/agent-state).
-  - **Robustness for agent consumption**: v3 responses are a list per ticker, so we filter to active tokens by market cap (guards against memecoins squatting major symbols) and cross-check the x402 price against the keyed feed, flagging divergence.
+- **CoinMarketCap AI Agent Hub**: used across **four distinct Hub surfaces** — REST, x402, and the MCP server:
+  - **REST** quotes + Fear & Greed drive the regime filter and momentum ranking.
+  - **x402 pay-per-request** on **two endpoints** in the trade loop, paid in USDT on BSC via Permit2 — a quotes cross-check *and* a `listings/latest` breadth snapshot ($0.01 each, real on-chain payments, logged).
+  - **MCP server** (`mcp.coinmarketcap.com`) — an isolated **attested market-analysis** layer (`blob market-scan`) genuinely consumes five rich MCP tools (derivatives & funding, BTC technicals, trending narratives, macro events, global metrics), synthesises a structured read, and **commits its digest on-chain** (ERC-8004 metadata) — recompute-verifiable, like the trading decisions. It informs reasoning, never the backtested risk sizing (the trading core stays frozen).
+  - **Robustness for agent consumption**: v3 responses are a list per ticker, so we filter to active tokens by market cap (guards against memecoins squatting major symbols) and cross-check the x402 price against the keyed feed.
 - **BNB Chain**: all execution, registration, identity and payments settle on BSC.
 
 ## Run your own Blob
