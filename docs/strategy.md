@@ -1,19 +1,16 @@
 # Blob — trading strategy (full description)
 
-Agent: `0x84BFC511d8027337B285433f122880fB340f30B9` (BSC mainnet, registered for the
-competition). Track 1 is scored on live PnL over June 22–28 with a 30% max-drawdown
-disqualification gate, a ≥1-trade/day rule, and simulated transaction costs.
+Agent: `0x84BFC511d8027337B285433f122880fB340f30B9` (BSC mainnet). Scored on live PnL over June 22–28 with a 30% max-drawdown
+disqualification gate, a ≥1-trade/day, and simulated transaction costs.
 
-This is the complete strategy, written for review. Nothing here is secret — Track 1
-is a PnL contest (others can't beat us by reading this), and the repo is public.
 
 ## 1. Thesis
 
-A 7-day live PnL contest with a hard DQ gate is not won by predicting the market —
+A 7-day live PnL timeframe with a hard DQ gate is not won by predicting the market —
 it is won by **surviving it while capturing the upside that exists**. Public
-precedents (Alpha Arena S1: naive LLM traders finished -12% to -75%) show most
+precedents show most
 autonomous agents self-destruct via overtrading, unbounded drawdown, or operational
-failure. Blob's edge is engineered survival + disciplined momentum capture, every
+failure. The edge is engineered survival + disciplined momentum capture, every
 parameter justified by measured costs and competition-format backtests. We do **not**
 claim alpha; we claim a return distribution with a protected left tail and an open
 right tail, in a field where the left tail eliminates competitors.
@@ -42,16 +39,16 @@ risk-only check so the drawdown ladder reacts intraday.
 
 4. **Risk engine (applied after the strategy, before signing)** — drawdown ladder on
    hourly equity marks: **−12% halves exposure, −18% flattens to USDT**. The official
-   DQ gate is 30% (confirmed by organizers); this self-caps the worst observed window
+   DQ gate is 30%; this self-caps the worst observed window
    drawdown at ~23.6% — a ~6.4-point margin under the confirmed 30% gate. Token allowlist and per-trade /
-   daily-count caps are enforced here too.
+   daily-count caps are enforced.
 
-5. **Daily-trade guarantee** — the contest requires ≥1 trade/day (7/week); a day in
+5. **Daily-trade guarantee** — ≥1 trade/day (7/week); a day in
    cash = DQ. When the strategy doesn't trade (e.g. risk-off), a minimum **qualifying
    micro-trade** fires, preferring to trim an existing holding so it never builds
    exposure the strategy didn't ask for. Retried every hour until it lands.
 
-## 3. Calibration — how the parameters were chosen
+## 3. Calibration 
 
 Three calibrations (defensive / moderate / return-seeking) were backtested on **358
 independent 7-day windows** (fresh capital and drawdown peak per window — exactly the
@@ -61,7 +58,7 @@ capturing upside (higher p90 / max) while keeping a wide DQ margin and 0% DQ. A
 entire apparent edge came from a single 2-day pump (2 of 358 windows), and it was
 worse on the median and p90.
 
-The kill-switch is set (−18% flatten) because it costs almost nothing in
+The kill-switch is set (−18% flatten) it costs almost nothing in
 return (−0.2pt median, identical p90/max) but caps worst-case drawdown at ~23.6% under the confirmed 30% gate. DQ = total loss, so we keep a wide margin while recovering the upside.
 
 ## 4. Execution cost re-tune (TWAK live-week fee waiver)
@@ -97,11 +94,9 @@ klines + Fear & Greed history, replaying the exact production decision code).
   slightly negative; then survival + a DQ-heavy field carry our rank.
 - **One-week sample.** The live regime is a single unknown draw. We can't predict it;
   we can only avoid blowing up and capture upside if it appears.
-- **Backtest cost model** assumes a flat per-side cost; the organizers' exact
+- **Backtest cost model** assumes a flat per-side cost; exact
   *simulated* cost model is unconfirmed, so we keep the entry threshold conservative
   (robust to any model).
-- **Field edge, not pure alpha.** Part of our expected rank comes from a weak field
-  (many competitors reportedly can't even execute swaps). That's real but external.
 
 ## 7. What a reviewer might suggest (open questions for the trader friend)
 
