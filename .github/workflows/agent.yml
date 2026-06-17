@@ -116,5 +116,8 @@ jobs:
             )
             echo "::endgroup::"
             rebalance_flag=""   # a forced rebalance applies to the first cycle only
-            [ "$i" -lt "$max_cycles" ] && sleep $((interval_min * 60))
+            # `if` (not `&& sleep`): a false test as the loop's last command
+            # would return non-zero and fail the whole job under `bash -e`,
+            # even though every cycle ran and state was pushed (false alarm).
+            if [ "$i" -lt "$max_cycles" ]; then sleep $((interval_min * 60)); fi
           done
