@@ -39,8 +39,8 @@ def regime_exposure(quotes: dict[str, Quote], fear_greed: int, cfg: Config) -> t
     return 0.0, reasons + ["regime: risk-off"]
 
 
-def momentum_score(q: Quote) -> float:
-    return 0.4 * q.pct_24h + 0.6 * q.pct_7d
+def momentum_score(q: Quote, w24: float = 0.4) -> float:
+    return w24 * q.pct_24h + (1.0 - w24) * q.pct_7d
 
 
 def select_candidates(
@@ -63,11 +63,11 @@ def select_candidates(
             # Cost-aware entry: expensive tokens must earn their round-trip.
             rt_cost = RT_COST_PCT.get(symbol, DEFAULT_RT_COST_PCT)
             floor = max(cfg.min_momentum_pct, cfg.cost_floor_mult * rt_cost)
-        if momentum_score(quotes[symbol]) >= floor:
+        if momentum_score(quotes[symbol], cfg.mom_w_24h) >= floor:
             eligible.append(quotes[symbol])
 
     def rank_score(q: Quote) -> float:
-        return momentum_score(q) + (cfg.retention_bonus_pct if q.symbol in held else 0.0)
+        return momentum_score(q, cfg.mom_w_24h) + (cfg.retention_bonus_pct if q.symbol in held else 0.0)
 
     eligible.sort(key=rank_score, reverse=True)
     return eligible[: cfg.top_k]

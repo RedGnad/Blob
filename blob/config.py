@@ -46,6 +46,7 @@ class Config:
     exit_momentum_pct: float = 0.0      # exit floor for already-held assets (anti-churn)
     retention_bonus_pct: float = 2.0    # challenger must beat a held asset by this margin
     top_k: int = 2
+    mom_w_24h: float = 0.4              # momentum blend: w*24h + (1-w)*7d
     rebalance_fraction: float = 0.20    # per-asset delta below this fraction of NAV is noise
     min_trade_usd: float = 1.0
     # Named guardrails (TWAK rubric: "per-trade and daily limits"). Generous on
