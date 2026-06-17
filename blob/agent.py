@@ -111,18 +111,25 @@ def run_once(cfg: Config, full_rebalance: bool | None = None) -> dict:
             break
         if executor.execute(o, prices, portfolio):
             executed += 1
-            portfolio.record_swap()
+            portfolio.record_swap(now)
     traded = executed > 0
     if executed:
-        portfolio.record_trade()
+        portfolio.record_trade(now)
 
-    # Daily qualification trade (R3): mandatory during the live window.
-    if cfg.mode == "live" and not portfolio.traded_today():
+    # Daily qualification trade (R3): the competition requires >=1 trade/day
+    # (7 over the week); a day in cash = <7 trades = disqualification. So when
+    # the strategy did NOT trade today (e.g. risk-off / 0% exposure), force a
+    # qualifying micro-trade. Exempt from the daily cap (missing it = DQ).
+    # Runs in BOTH modes so the paper rehearsal proves the guarantee, not just
+    # the live week. Retries every cycle until it lands (traded_today gates it).
+    if not portfolio.traded_today(now):
         micro = micro_qualification_order(cfg, portfolio, prices)
         if micro is not None and executor.execute(micro, prices, portfolio):
-            portfolio.record_trade()
+            portfolio.record_trade(now)
             traded = True
-            log.info("daily qualification micro-trade executed")
+            log.info("daily qualification micro-trade executed (mode=%s)", cfg.mode)
+        elif micro is None:
+            log.error("DQ RISK: no qualifying trade possible (portfolio too small)")
 
     # The live executor settles on-chain without touching local holdings, so
     # re-sync from the chain after trading and re-mark, otherwise the saved

@@ -79,14 +79,13 @@ def micro_qualification_order(
     """Minimum-size trade to satisfy the 1-trade/day rule (R3) when the
     strategy has nothing to do. Qualification constraint, not a scoring lever.
 
-    Buys with BASE when available; when fully deployed (no BASE left), sells a
-    sliver of the largest holding instead — failing the daily trade means
-    disqualification, so this path must always produce an order if any value
-    is tradable. The 10% buffer and the 1.5x reserve requirement keep us off
-    the exact limit (slippage, price drift between quote and execution)."""
+    Prefers trimming an existing risk holding (qualifies AND nudges toward
+    cash, so it never builds exposure the strategy didn't ask for — important
+    in a risk-off week); falls back to a minimum BASE->ETH buy only when there
+    is nothing to trim. Failing the daily trade means disqualification, so this
+    must produce an order whenever any value is tradable. The 10% buffer and
+    1.5x reserve keep us off the exact limit (slippage, quote/exec drift)."""
     amount = round(cfg.min_trade_usd * 1.1, 2)
-    if portfolio.holdings.get(BASE, 0.0) >= amount * 1.5:
-        return Order(side="buy", symbol="ETH", usd_amount=amount)
     largest, largest_usd = None, 0.0
     for symbol, qty in portfolio.holdings.items():
         if symbol == BASE:
@@ -96,6 +95,8 @@ def micro_qualification_order(
             largest, largest_usd = symbol, usd
     if largest and largest_usd >= amount * 1.5:
         return Order(side="sell", symbol=largest, usd_amount=amount)
+    if portfolio.holdings.get(BASE, 0.0) >= amount * 1.5:
+        return Order(side="buy", symbol="ETH", usd_amount=amount)
     log.error("cannot build qualification trade: portfolio too small")
     return None
 
