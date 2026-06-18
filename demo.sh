@@ -18,9 +18,9 @@ banner "1/5  Verify our on-chain proof yourself — no key, no trust"
 $PY verify.py
 pause
 
-banner "2/5  One real decision (data -> regime -> orders)"
-echo "   Reads CoinMarketCap, picks an exposure, plans trades:"
-$PY -m blob run-once 2>/dev/null | $PY -c "import json,sys;d=json.load(sys.stdin);print('   exposure:',d['exposure']);print('   regime + picks:');[print('     -',r) for r in d['reasons']];print('   trades executed:',d['orders_executed'])"
+banner "2/5  One real decision — reads the market, decides how much to risk"
+echo "   (risk-off regime => it stays in cash; risk-on => it deploys into momentum)"
+$PY -m blob run-once --rebalance 2>/dev/null | $PY -c "import json,sys;d=json.load(sys.stdin);print('   exposure: %.0f%% in the market' % (d['exposure']*100));print('   regime + picks:');[print('     -',r) for r in d['reasons']];print('   trades executed:',d['orders_executed'])"
 pause
 
 banner "3/5  Engineered to survive — 358 competition-format windows"
@@ -33,7 +33,7 @@ pause
 
 banner "5/5  A trustless alpha market — Blob sells its signal on ERC-8183"
 echo "   The buyer recomputes the signal from committed inputs and verifies it:"
-$PY bnb-sdk-demo/signal.py 2>/dev/null | tail -3
+$PY bnb-sdk-demo/signal.py 2>/dev/null | grep -E "digest:|verify:" | sed 's/^/   /'
 pause
 
 banner "All of it is real and on-chain (BSC) — click to confirm"
