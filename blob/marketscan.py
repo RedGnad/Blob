@@ -21,18 +21,11 @@ from datetime import datetime, timezone
 from .attest import attest_onchain, decision_digest
 from .config import PROJECT_ROOT, Config
 from .mcp_client import CmcMcpClient
+from .skills import execute_skill, find_skill
 
 log = logging.getLogger(__name__)
 
 BTC_ID = "1"
-
-
-def _safe(client: CmcMcpClient, tool: str, args: dict | None = None):
-    try:
-        return client.call_tool(tool, args or {})
-    except Exception as exc:  # noqa: BLE001 — isolated, must never crash the agent
-        log.warning("MCP tool %s failed: %s", tool, str(exc)[:160])
-        return None
 
 
 def _rows(payload, key):
@@ -45,26 +38,30 @@ def _rows(payload, key):
 
 
 def scan(cfg: Config) -> dict:
-    """Consume the rich MCP tools and synthesise a structured market read."""
+    """Execute the official CMC `market-report` Skill (find_skill -> execute_skill)
+    over the Hub MCP server, then synthesise a structured market read."""
+    skill = find_skill("market report")
     client = CmcMcpClient(cfg.cmc_api_key)
-    consumed: list[str] = []
     try:
-        deriv = _safe(client, "get_global_crypto_derivatives_metrics")
-        tech = _safe(client, "get_crypto_technical_analysis", {"id": BTC_ID})
-        narr = _safe(client, "trending_crypto_narratives")
-        macro = _safe(client, "get_upcoming_macro_events")
-        glob = _safe(client, "get_global_metrics_latest")
+        data = execute_skill(skill, client) if skill else {}
     finally:
         client.close()
 
+    deriv = data.get("get_global_crypto_derivatives_metrics")
+    tech = data.get("get_crypto_marketcap_technical_analysis") or data.get("get_crypto_technical_analysis")
+    narr = data.get("trending_crypto_narratives")
+    macro = data.get("get_upcoming_macro_events")
+    glob = data.get("get_global_metrics_latest")
+    consumed = [t for t, v in data.items() if v is not None]
+
     analysis: dict = {
         "ts": datetime.now(timezone.utc).isoformat(timespec="seconds"),
-        "source": "CoinMarketCap AI Agent Hub (MCP)",
+        "source": "CoinMarketCap AI Agent Hub Skill",
+        "skill": {"name": skill["name"], "from_repo": skill["loaded_from_repo"]} if skill else None,
         "mcp_tools_consumed": consumed,
     }
 
     if deriv:
-        consumed.append("get_global_crypto_derivatives_metrics")
         oi = deriv.get("totalOpenInterest", {})
         analysis["derivatives"] = {
             "open_interest": oi.get("current"),
@@ -72,7 +69,6 @@ def scan(cfg: Config) -> dict:
             "oi_7d": oi.get("percentage_change_7d"),
         }
     if tech:
-        consumed.append("get_crypto_technical_analysis")
         ma = tech.get("moving_averages", {})
         analysis["btc_technical"] = {
             "sma_7d": ma.get("simple_moving_average_7_day"),
@@ -80,21 +76,18 @@ def scan(cfg: Config) -> dict:
             "sma_200d": ma.get("simple_moving_average_200_day"),
         }
     if narr:
-        consumed.append("trending_crypto_narratives")
         top = _rows(narr, "categoryList")[:3]
         analysis["top_narratives"] = [
             {"name": r.get("categoryName"), "mc_7d": r.get("marketCapChangePercentage7d")}
             for r in top
         ]
     if macro:
-        consumed.append("get_upcoming_macro_events")
         events = _rows(macro, "upcomingEventNews")
         if events:
             analysis["next_macro_event"] = {
                 "title": events[0].get("title"), "date": events[0].get("eventDate"),
             }
     if glob:
-        consumed.append("get_global_metrics_latest")
         analysis["global_snapshot"] = str(glob.get("market_size", {}).get(
             "total_crypto_market_cap", glob.get("last_updated")))[:120]
 
