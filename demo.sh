@@ -20,6 +20,7 @@ pause
 
 banner "2/5  One real decision — reads the market, decides how much to risk"
 echo "   (risk-off regime => it stays in cash; risk-on => it deploys into momentum)"
+echo "   ... reading live CoinMarketCap data (a few seconds) ..."
 $PY -m blob run-once --rebalance 2>/dev/null | $PY -c "import json,sys;d=json.load(sys.stdin);print('   exposure: %.0f%% in the market' % (d['exposure']*100));print('   regime + picks:');[print('     -',r) for r in d['reasons']];print('   trades executed:',d['orders_executed'])"
 pause
 
