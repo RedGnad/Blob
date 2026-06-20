@@ -45,8 +45,11 @@ Full buy → fund → deliver lifecycle, on-chain, with the recompute-verificati
 verify  manifest_integrity=True  signal_recompute=True
 ```
 
-`settle` is permissionless and completes the job to COMPLETED after the
-OptimisticPolicy dispute window (1 day on testnet): `python market.py --settle`.
+| settle (permissionless, after the 1-day dispute window) → **COMPLETED** | [`c01e49da…`](https://testnet.bscscan.com/tx/c01e49da51709845738f7c84726ca119fb8ebb3109929544c5ca83d5064c6291) |
+
+Full lifecycle proven on-chain: create → fund → submit → **settle (COMPLETED)**.
+The escrow released to the provider only after delivery — *trustless payment* —
+and the buyer recomputed the signal from committed inputs — *trustless quality*.
 
 ## Run it
 
