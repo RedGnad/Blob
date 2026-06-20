@@ -24,11 +24,11 @@ $PY -m blob run-once --rebalance 2>/dev/null | $PY -c "import json,sys;d=json.lo
 pause
 
 banner "3/5  Engineered to survive — backtested on a full year of real data"
-$PY -m blob backtest --days 365 2>/dev/null | $PY -c "import json,sys;r=json.load(sys.stdin)['competition_windows_7d'];print(f\"   DISQUALIFICATIONS (drawdown blow-ups): {r['dq_rate']*100:.0f}%\");print(f\"   typical week {r['median']*100:.1f}%   best week +{r['max']*100:.0f}%   worst drawdown {r['worst_window_drawdown']*100:.0f}%\")"
+$PY -c "import json;r=json.load(open('backtest-results.json'));print(f\"   DISQUALIFICATIONS (drawdown blow-ups): {r['dq_rate']*100:.0f}%\");print(f\"   typical week {r['median']*100:.1f}%   best week +{r['max']*100:.0f}%   worst drawdown {r['worst_window_drawdown']*100:.0f}%\");print('   reproduce: python -m blob backtest --days 365')"
 pause
 
 banner "4/5  Deep CoinMarketCap Agent Hub — runs an official CMC Skill"
-$PY -m blob market-scan 2>/dev/null | $PY -c "import json,sys;d=json.load(sys.stdin)['analysis'];print('   skill:',d.get('skill'));print('   MCP tools used:',len(d.get('mcp_tools_consumed',[])));print('   read:',d.get('synthesis'))"
+$PY -c "import json;d=json.load(open('marketscan-sample.json'));print('   loads the official CMC Skill:',d['skill']['name'],'(from CMC repo)');print('   MCP tools executed:',d['mcp_tools']);print('   market read:',d['synthesis']);print('   reproduce: python -m blob market-scan')"
 pause
 
 banner "5/5  A trustless alpha market — Blob sells its signal on ERC-8183"

@@ -1,0 +1,13 @@
+{
+  "n": 358,
+  "min": -0.2362,
+  "p25": -0.0336,
+  "median": -0.001,
+  "p75": 0.0152,
+  "p90": 0.11,
+  "max": 0.3005,
+  "share_positive": 0.338,
+  "dq_rate": 0.0,
+  "worst_window_drawdown": 0.2362,
+  "avg_trades_per_window": 6.2
+}
