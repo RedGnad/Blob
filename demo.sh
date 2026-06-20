@@ -23,8 +23,8 @@ echo "   (risk-off regime => it stays in cash; risk-on => it deploys into moment
 $PY -m blob run-once --rebalance 2>/dev/null | $PY -c "import json,sys;d=json.load(sys.stdin);print('   exposure: %.0f%% in the market' % (d['exposure']*100));print('   regime + picks:');[print('     -',r) for r in d['reasons']];print('   trades executed:',d['orders_executed'])"
 pause
 
-banner "3/5  Engineered to survive — 358 competition-format windows"
-$PY -m blob backtest --days 365 2>/dev/null | $PY -c "import json,sys;r=json.load(sys.stdin)['competition_windows_7d'];print(f\"   median {r['median']*100:.1f}%   p90 +{r['p90']*100:.0f}%   max +{r['max']*100:.0f}%\");print(f\"   worst drawdown {r['worst_window_drawdown']*100:.0f}%   DISQUALIFICATIONS: {r['dq_rate']*100:.0f}%\")"
+banner "3/5  Engineered to survive — backtested on a full year of real data"
+$PY -m blob backtest --days 365 2>/dev/null | $PY -c "import json,sys;r=json.load(sys.stdin)['competition_windows_7d'];print(f\"   DISQUALIFICATIONS (drawdown blow-ups): {r['dq_rate']*100:.0f}%\");print(f\"   typical week {r['median']*100:.1f}%   best week +{r['max']*100:.0f}%   worst drawdown {r['worst_window_drawdown']*100:.0f}%\")"
 pause
 
 banner "4/5  Deep CoinMarketCap Agent Hub — runs an official CMC Skill"
