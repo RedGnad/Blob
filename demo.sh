@@ -21,7 +21,11 @@ pause
 banner "2/5  One real decision — reads the market, decides how much to risk"
 echo "   (risk-off regime => it stays in cash; risk-on => it deploys into momentum)"
 echo "   ... reading live CoinMarketCap data (a few seconds) ..."
-$PY -m blob run-once --rebalance 2>/dev/null | $PY -c "import json,sys;d=json.load(sys.stdin);print('   exposure: %.0f%% in the market' % (d['exposure']*100));print('   regime + picks:');[print('     -',r) for r in d['reasons']];print('   trades executed:',d['orders_executed'])"
+$PY -m blob run-once --rebalance 2>/dev/null | $PY -c "import json,sys;d=json.load(sys.stdin);print('   exposure: %.0f%% in the market' % (d['exposure']*100));print('   regime + picks:');[print('     -',r) for r in d['reasons']]"
+echo
+echo "   When it deploys, it signs and executes for real on-chain (self-custody):"
+echo "   real swap it executed -> https://bscscan.com/tx/0x080ddda1faa6e9564c548874d862daeb697748874233e6190f24a4abbd90b877"
+echo "   (live trading runs June 22-28; today it is in dress-rehearsal)"
 pause
 
 banner "3/5  Engineered to survive — backtested on a full year of real data"
