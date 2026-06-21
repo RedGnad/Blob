@@ -27,6 +27,10 @@ on:
         description: "Force a full strategy rebalance (debug/ops)"
         type: boolean
         default: false
+      live:
+        description: "Force MODE=live for this one run (pre-window validation)"
+        type: boolean
+        default: false
 
 concurrency:
   group: agent
@@ -62,15 +66,31 @@ jobs:
           twak --version
 
       - name: Configure (secrets never echoed)
+        env:
+          AGENT_MODE: ${{ vars.AGENT_MODE || 'paper' }}
+          FORCE_LIVE: ${{ inputs.live }}
         run: |
+          # Auto-live during the competition window (no manual flip needed):
+          # MODE=live for 2026-06-22 00:00 UTC .. 2026-06-29 00:00 UTC, or when a
+          # run is dispatched with live=true (pre-window validation). Paper otherwise.
+          now=$(date -u +%s)
+          start=$(date -u -d '2026-06-22 00:00:00' +%s)
+          end=$(date -u -d '2026-06-29 00:00:00' +%s)
+          if [ "$FORCE_LIVE" = "true" ] || { [ "$now" -ge "$start" ] && [ "$now" -lt "$end" ]; }; then
+            MODE=live
+          else
+            MODE="$AGENT_MODE"
+          fi
+          echo "resolved MODE=$MODE"
           install -m 600 /dev/null .env
           {
             echo "CMC_API_KEY=${{ secrets.CMC_API_KEY }}"
             echo "TWAK_ACCESS_ID=${{ secrets.TWAK_ACCESS_ID }}"
             echo "TWAK_HMAC_SECRET=${{ secrets.TWAK_HMAC_SECRET }}"
             echo "AGENT_WALLET_ADDRESS=0x84BFC511d8027337B285433f122880fB340f30B9"
-            echo "MODE=${{ vars.AGENT_MODE || 'paper' }}"
+            echo "MODE=$MODE"
             echo "X402_ENABLED=${{ vars.X402_ENABLED || '0' }}"
+            echo "ATTEST_ENABLED=${{ vars.ATTEST_ENABLED || '0' }}"
           } > .env
           mkdir -p ~/.twak
           echo "${{ secrets.TWAK_HOME_B64 }}" | base64 -d | tar -xz -C ~/.twak
